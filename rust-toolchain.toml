@@ -1,0 +1,5 @@
+# rustup uses this exact version anywhere inside the repository (tauri-cli calls rustc from apps/desktop).
+[toolchain]
+channel = "1.100.0"
+profile = "minimal"
+components = ["clippy", "rustfmt"]

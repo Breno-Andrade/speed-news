@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+  <!-- Checkered flag on a pole, drawn for 16px: every checker cell is exactly 3x3 px on the pixel
+       grid so it stays crisp in the panel. Plain (non-symbolic) SVG in the panel text color: GNOME 46 fails to
+       recolor "-symbolic" SVGs loaded from a file and draws a blank square instead. -->
+  <g fill="#ffffff">
+    <rect x="1" y="1" width="2" height="14" rx="1"/>
+    <rect x="3" y="2" width="3" height="3"/>
+    <rect x="9" y="2" width="3" height="3"/>
+    <rect x="6" y="5" width="3" height="3"/>
+    <rect x="12" y="5" width="3" height="3"/>
+    <rect x="3" y="8" width="3" height="3"/>
+    <rect x="9" y="8" width="3" height="3"/>
+  </g>
+</svg>

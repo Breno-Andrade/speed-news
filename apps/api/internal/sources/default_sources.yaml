@@ -1,0 +1,72 @@
+# News sources read by Speed News.
+# Only headline, summary, image and link exposed by each feed are shown; the full article opens on the source site.
+# Adding a source (or a new series later) only requires a new entry here.
+sources:
+  - slug: formula1-com
+    displayName: Formula1.com
+    seriesSlug: f1
+    languageCode: en
+    feedKind: rss
+    feedUrl: https://www.formula1.com/en/latest/all.xml
+    homepageUrl: https://www.formula1.com
+    # The feed has no pictures; article pages publish og:image (checked 2026-11-24).
+    imageFromArticlePage: true
+
+  - slug: motorsport-f1
+    displayName: Motorsport.com
+    seriesSlug: f1
+    languageCode: en
+    feedKind: rss
+    feedUrl: https://www.motorsport.com/rss/f1/news/
+    homepageUrl: https://www.motorsport.com/f1/
+
+  - slug: autosport-f1
+    displayName: Autosport
+    seriesSlug: f1
+    languageCode: en
+    feedKind: rss
+    feedUrl: https://www.autosport.com/rss/f1/news/
+    homepageUrl: https://www.autosport.com/f1/
+
+  - slug: the-race-f1
+    displayName: The Race
+    seriesSlug: f1
+    languageCode: en
+    feedKind: rss
+    feedUrl: https://www.the-race.com/category/formula-1/feed/
+    homepageUrl: https://www.the-race.com/formula-1/
+
+  - slug: motorsport-br-f1
+    displayName: Motorsport.com Brasil
+    seriesSlug: f1
+    languageCode: pt
+    feedKind: rss
+    feedUrl: https://br.motorsport.com/rss/f1/news/
+    homepageUrl: https://br.motorsport.com/f1/
+
+  - slug: f1mania
+    displayName: F1Mania
+    seriesSlug: f1
+    languageCode: pt
+    feedKind: rss
+    feedUrl: https://f1mania.net/feed/
+    homepageUrl: https://f1mania.net
+
+  # No F1-only feed, but the site's feed is almost entirely F1 (checked 2026-11-24).
+  - slug: autoracing
+    displayName: Autoracing
+    seriesSlug: f1
+    languageCode: pt
+    feedKind: rss
+    feedUrl: https://www.autoracing.com.br/feed/
+    homepageUrl: https://www.autoracing.com.br
+
+  # F1 columns, analysis and history. No picture in the feed and no og:image on the pages
+  # (its only "featured" image is a navigation thumbnail of another post), so no image lookup.
+  - slug: gptotal
+    displayName: GPTotal
+    seriesSlug: f1
+    languageCode: pt
+    feedKind: rss
+    feedUrl: https://www.gptotal.com.br/feed/
+    homepageUrl: https://www.gptotal.com.br

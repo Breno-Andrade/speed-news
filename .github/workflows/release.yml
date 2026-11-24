@@ -1,0 +1,55 @@
+name: Release
+
+# Push a tag like v0.1.0 to build installers on real Linux, Windows and macOS machines
+# and attach them to a draft GitHub release.
+on:
+  push:
+    tags: ["v*"]
+
+env:
+  GO_VERSION: "1.27.4"
+  NODE_VERSION: "22.23.5"
+
+jobs:
+  bundle:
+    name: Bundle (${{ matrix.platform }})
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [ubuntu-22.04, windows-latest, macos-latest]
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tauri system libraries (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: apps/api/go.sum
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - name: Rust toolchain
+        working-directory: apps/desktop/src-tauri
+        shell: bash
+        run: rustup show active-toolchain || rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri
+      - run: npm ci
+      # tauri build runs beforeBuildCommand: builds the Go sidecar for this platform, then the UI.
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: apps/desktop
+          tagName: ${{ github.ref_name }}
+          releaseName: Speed News ${{ github.ref_name }}
+          releaseDraft: true
+          prerelease: false

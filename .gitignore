@@ -1,0 +1,27 @@
+node_modules/
+dist/
+*.log
+.DS_Store
+
+# Tauri / Rust
+apps/desktop/src-tauri/target/
+apps/desktop/src-tauri/gen/
+# Sidecar binaries are built from apps/api
+apps/desktop/src-tauri/binaries/
+
+# Go
+apps/api/bin/
+*.db
+*.db-wal
+*.db-shm
+
+# Local env
+.env
+.env.local
+.dev-data/
+dist-linux/
+
+# Test reports
+apps/desktop/coverage/
+apps/desktop/playwright-report/
+apps/desktop/test-results/

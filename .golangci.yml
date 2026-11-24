@@ -1,0 +1,25 @@
+version: "2"
+
+linters:
+  exclusions:
+    # Allows the idiomatic `defer rows.Close()` / `defer transaction.Rollback()` on read paths.
+    presets:
+      - std-error-handling
+  enable:
+    - varnamelen # project rule: identifiers must be semantic (no a, x, z...)
+    - errorlint
+    - bodyclose
+  settings:
+    varnamelen:
+      min-name-length: 3
+      # Strictest possible: the default (5) tolerates short names in short scopes, and 0 means "default".
+      # A name used only on the very next line still slips through; code review covers that.
+      max-distance: 1
+      check-receiver: true
+      check-return: true
+      ignore-names:
+        - err
+        - ctx
+        - id
+      ignore-decls:
+        - test *testing.T

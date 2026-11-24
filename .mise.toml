@@ -1,0 +1,8 @@
+# Pinned toolchain for running the desktop app natively (the Dev Container covers everything else).
+#   mise install      → installs exactly these versions, isolated from the system ones
+# Rust is pinned in rust-toolchain.toml (rustup reads it automatically).
+# Keep in sync with .devcontainer/Dockerfile and .github/workflows/.
+[tools]
+go = "1.27.4"
+node = "22.23.5"
+"aqua:golangci/golangci-lint" = "2.15.0"

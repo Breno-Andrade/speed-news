@@ -73,6 +73,22 @@ make lint
 - **Windows**: clicking the icon opens the popover; red dot on the icon, count in the tooltip and popover header.
 - Everywhere: the popover has a power button to quit the app.
 
+## Releases and automatic updates
+
+1. Bump `version` in `apps/desktop/package.json` (the only place: `tauri.conf.json` reads it).
+2. Commit, then `git tag v0.2.0 && git push --tags`.
+3. The Release workflow builds Linux, Windows and macOS, signs every bundle and creates a **draft** release with `latest.json`.
+4. Publish the draft. Installed apps find it through `releases/latest/download/latest.json`.
+
+Installed apps check one minute after start and every 6 hours:
+
+| Installed as | Update |
+|---|---|
+| AppImage (recommended on Linux), Windows, macOS | downloaded in the background, installed while the popover is closed, app restarts; "Updated to vX" shows next time |
+| `.deb` / `.rpm` | downloaded, then offered in the app ("Update now"): installing asks for the administrator password |
+
+Updates are signed: the app only installs bundles signed with the project's updater key (public key in `tauri.conf.json`, private key in the repository secrets `TAURI_SIGNING_PRIVATE_KEY` / `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`). **If the private key is lost, installed apps can never update again** — keep a backup.
+
 ## License and trademarks
 
 Speed News is free software under the [GNU GPL v3.0 or later](LICENSE).

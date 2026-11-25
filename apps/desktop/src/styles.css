@@ -408,6 +408,57 @@ button {
   height: 100%;
 }
 
+/* ---------- update notices ---------- */
+
+.update-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.update-notice span {
+  flex: 1;
+}
+
+.update-notice--done {
+  color: var(--color-live);
+}
+
+.update-notice__action {
+  padding: 4px 10px;
+  border: none;
+  border-radius: var(--radius-small);
+  background: var(--color-accent);
+  color: var(--color-accent-text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.update-notice__action:disabled {
+  opacity: 0.6;
+}
+
+.update-notice__hint {
+  flex-basis: 100%;
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.update-notice__dismiss {
+  padding: 0 4px;
+  border: none;
+  background: none;
+  color: var(--color-text-muted);
+  font-size: 16px;
+  line-height: 1;
+}
+
 /* ---------- race card ---------- */
 
 .race-card {

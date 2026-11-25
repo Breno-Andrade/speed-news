@@ -1,4 +1,5 @@
 // Every call to the native shell goes through here, so the UI also runs in a plain browser during development.
+import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
@@ -54,6 +55,41 @@ export function onPopoverShown(onShown: () => void): () => void {
     isStopped = true;
     stopListening?.();
   };
+}
+
+/** Installed app version (from package.json via tauri.conf.json); null in the browser. */
+export async function getAppVersion(): Promise<string | null> {
+  if (!isRunningInTauri()) return null;
+  return getVersion();
+}
+
+export type UpdateReady = { version: string; requiresPassword: boolean };
+
+/**
+ * .deb/.rpm installs only: an update was downloaded and needs the admin password to install,
+ * so the UI asks first (other installs update silently while the popover is hidden).
+ */
+export function onUpdateReady(onReady: (updateReady: UpdateReady) => void): () => void {
+  if (!isRunningInTauri()) return () => undefined;
+  let stopListening: (() => void) | undefined;
+  let isStopped = false;
+  listen<UpdateReady>("update-ready", (updateEvent) => onReady(updateEvent.payload))
+    .then((unlisten) => {
+      if (isStopped) unlisten();
+      else stopListening = unlisten;
+    })
+    .catch(() => undefined);
+  return () => {
+    isStopped = true;
+    stopListening?.();
+  };
+}
+
+/** Installs the downloaded update (system password prompt on .deb/.rpm), then restarts. */
+export async function installPendingUpdate(): Promise<void> {
+  if (isRunningInTauri()) {
+    await invoke("install_pending_update");
+  }
 }
 
 /** Esc key: hides the popover (the app keeps running in the panel). */

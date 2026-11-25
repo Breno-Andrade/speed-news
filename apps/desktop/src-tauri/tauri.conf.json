@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Speed News",
-  "version": "0.1.0",
+  "version": "../package.json",
   "identifier": "dev.speednews.desktop",
   "build": {
     "beforeDevCommand": "npm run build:sidecar && npm run dev",
@@ -30,13 +30,32 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "externalBin": ["binaries/news-api"],
+    "externalBin": [
+      "binaries/news-api"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "createUpdaterArtifacts": true,
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEREMjA5OTg1NzhCRUI2NTIKUldSU3RyNTRoWmtnM1dQSlFIU28rQ21EMEs5QVVsN21OTURMZFEwSXFjVGRJUStnV3NXd1ZEQmYK",
+      "endpoints": [
+        "https://github.com/Breno-Andrade/speed-news/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }

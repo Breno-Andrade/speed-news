@@ -29,6 +29,14 @@ Tray widget (not a desktop window) that aggregates Formula 1 news and shows the 
 - E2E (`apps/desktop/e2e`) shares one backend: each test restores state in `beforeEach`; never depend on test order.
 - Coverage floors (Go 78%, frontend in `vite.config.ts`) only go up.
 
+## Releases / updater
+
+- Version lives only in `apps/desktop/package.json`; tag `v*` → `release.yml` (draft release + signed bundles + `latest.json`).
+- Updater logic: `src-tauri/src/updates.rs` (silent on AppImage/Windows/macOS while the popover is hidden; ask first on .deb/.rpm; never in dev builds).
+- Updater signing key: never commit it. It lives in the maintainer's `~/.tauri/` and in the repo secrets; the public key is in `tauri.conf.json`.
+- Keep the D-Bus interface `dev.speednews.Desktop1` backward compatible: the GNOME extension updates separately from the app.
+- Data must survive updates: schema changes go through `addedColumns`/defaults in `storage/sqlite`, settings fields need defaults.
+
 ## Toolchain
 
 Pinned versions live in `.devcontainer/Dockerfile`, `.mise.toml`, `rust-toolchain.toml` and `.github/workflows/*.yml`. Bump them together.

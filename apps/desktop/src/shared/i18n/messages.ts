@@ -73,6 +73,11 @@ export type Messages = {
   previousArticle: string;
   nextArticle: string;
   settingsSaveFailed: string;
+  updatedTo: (appVersion: string) => string;
+  updateReady: (appVersion: string) => string;
+  installUpdate: string;
+  installUpdatePasswordHint: string;
+  dismiss: string;
 };
 
 export type WeatherCondition = "clear" | "mainlyClear" | "partlyCloudy" | "cloudy" | "fog" | "drizzle" | "rain" | "snow" | "showers" | "thunderstorm";
@@ -169,6 +174,11 @@ const portugueseMessages: Messages = {
   previousArticle: "Anterior",
   nextArticle: "Próxima",
   settingsSaveFailed: "Não foi possível salvar",
+  updatedTo: (appVersion) => `Atualizado para a versão ${appVersion}`,
+  updateReady: (appVersion) => `Versão ${appVersion} pronta`,
+  installUpdate: "Atualizar agora",
+  installUpdatePasswordHint: "O sistema vai pedir sua senha de administrador.",
+  dismiss: "Fechar aviso",
 };
 
 const englishMessages: Messages = {
@@ -263,6 +273,11 @@ const englishMessages: Messages = {
   previousArticle: "Previous",
   nextArticle: "Next",
   settingsSaveFailed: "Couldn't save",
+  updatedTo: (appVersion) => `Updated to version ${appVersion}`,
+  updateReady: (appVersion) => `Version ${appVersion} is ready`,
+  installUpdate: "Update now",
+  installUpdatePasswordHint: "Your system will ask for the administrator password.",
+  dismiss: "Dismiss",
 };
 
 // Jolpica returns English names; Portuguese names follow how Brazilian media calls each Grand Prix.

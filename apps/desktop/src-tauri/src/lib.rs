@@ -5,6 +5,7 @@
 mod panel_bridge;
 mod sidecar;
 mod tray;
+mod updates;
 
 use tauri::{AppHandle, Manager, RunEvent, WindowEvent};
 
@@ -19,8 +20,10 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_positioner::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(sidecar::SidecarState::default())
-        .manage(tray::PopoverState::default());
+        .manage(tray::PopoverState::default())
+        .manage(updates::PendingUpdateState::default());
     #[cfg(target_os = "linux")]
     let application_builder = application_builder.manage(panel_bridge::PanelBridgeState::default());
 
@@ -30,6 +33,7 @@ pub fn run() {
             tray::update_tray,
             tray::set_close_on_focus_loss,
             tray::hide_main_window,
+            updates::install_pending_update,
             quit_app
         ])
         .setup(|application| {
@@ -42,6 +46,7 @@ pub fn run() {
             #[cfg(target_os = "linux")]
             panel_bridge::start(application.handle());
             sidecar::start_sidecar(application.handle())?;
+            updates::start_background_updates(application.handle());
             Ok(())
         })
         .on_window_event(|window, window_event| match window_event {

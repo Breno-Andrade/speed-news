@@ -2,7 +2,7 @@
 name = "speed-news"
 version = "0.1.0"
 description = "Tray widget that aggregates Formula 1 news"
-license = "GPL-3.0-or-later"
+license = "AGPL-3.0-or-later"
 edition = "2021"
 
 [lib]
@@ -33,3 +33,5 @@ tauri-plugin-autostart = "2"
 tray-icon = { version = "0.25", default-features = false, features = ["ksni"] }
 # D-Bus service for the GNOME Shell panel button (same zbus build ksni already pulls in).
 zbus = { version = "5", default-features = false, features = ["async-io", "blocking-api"] }
+# Same GTK build Tauri uses: focus the popover once it is mapped (see tray::focus_when_mapped).
+gtk = "0.18"

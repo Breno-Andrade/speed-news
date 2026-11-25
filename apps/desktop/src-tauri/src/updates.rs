@@ -18,7 +18,6 @@ use tauri_plugin_updater::{Update, UpdaterExt};
 const FIRST_CHECK_DELAY: Duration = Duration::from_secs(60);
 const CHECK_INTERVAL: Duration = Duration::from_secs(6 * 60 * 60);
 const HIDDEN_WINDOW_POLL_INTERVAL: Duration = Duration::from_secs(30);
-const MAIN_WINDOW_LABEL: &str = "main";
 
 /// An update downloaded for a .deb/.rpm install, waiting for the user's go-ahead.
 #[derive(Default)]
@@ -28,7 +27,7 @@ pub struct PendingUpdateState {
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-struct UpdateReadyPayload {
+pub struct UpdateReadyPayload {
     version: String,
     requires_password: bool,
 }
@@ -89,10 +88,7 @@ async fn check_and_apply(application_handle: &AppHandle, strategy: &InstallStrat
             application_handle.restart();
         }
         InstallStrategy::AskFirst => {
-            let ready_payload = UpdateReadyPayload {
-                version: update.version.clone(),
-                requires_password: true,
-            };
+            let ready_payload = ready_payload(&update.version);
             if let Ok(mut pending_guard) = application_handle.state::<PendingUpdateState>().pending_update.lock() {
                 *pending_guard = Some((update, update_bytes));
             }
@@ -102,16 +98,9 @@ async fn check_and_apply(application_handle: &AppHandle, strategy: &InstallStrat
     }
 }
 
-/// Never replace the app under the user's eyes: wait until the popover is closed.
+/// Never replace the app under the user's eyes: wait until the popover is closed (or destroyed).
 async fn wait_until_popover_hidden(application_handle: &AppHandle) {
-    loop {
-        let is_visible = application_handle
-            .get_webview_window(MAIN_WINDOW_LABEL)
-            .and_then(|main_window| main_window.is_visible().ok())
-            .unwrap_or(false);
-        if !is_visible {
-            return;
-        }
+    while crate::popover::is_popover_visible(application_handle) {
         tokio_sleep(HIDDEN_WINDOW_POLL_INTERVAL).await;
     }
 }
@@ -120,6 +109,24 @@ async fn tokio_sleep(sleep_duration: Duration) {
     tauri::async_runtime::spawn_blocking(move || std::thread::sleep(sleep_duration))
         .await
         .ok();
+}
+
+/// The update downloaded for a .deb/.rpm install, if any. The UI asks on every mount: the
+/// "update-ready" event is lost when it fires while the popover webview does not exist.
+#[tauri::command]
+pub fn pending_update(pending_update_state: tauri::State<'_, PendingUpdateState>) -> Option<UpdateReadyPayload> {
+    pending_update_state
+        .pending_update
+        .lock()
+        .ok()
+        .and_then(|pending_guard| pending_guard.as_ref().map(|(update, _)| ready_payload(&update.version)))
+}
+
+fn ready_payload(version: &str) -> UpdateReadyPayload {
+    UpdateReadyPayload {
+        version: version.to_string(),
+        requires_password: true,
+    }
 }
 
 /// "Update (asks for password)" in the UI, for .deb/.rpm installs.

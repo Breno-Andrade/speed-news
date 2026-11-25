@@ -38,7 +38,7 @@ describe("App", () => {
 
     emitUnreadCount(fakeApiClient, 3);
     expect(await screen.findByText("3", { selector: ".unread-pill" })).toBeInTheDocument();
-    // In the browser, updateTray mirrors the tray count in the tab title.
+    // In the browser, the tab title mirrors what the tray would show.
     await waitFor(() => expect(document.title).toBe("Speed News"));
   });
 

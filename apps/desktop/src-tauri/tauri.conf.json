@@ -13,6 +13,7 @@
     "windows": [
       {
         "label": "main",
+        "create": false,
         "title": "Speed News",
         "width": 380,
         "height": 620,

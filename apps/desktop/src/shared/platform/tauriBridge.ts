@@ -14,26 +14,19 @@ export async function fetchSidecarConnection(): Promise<ApiConnection | null> {
   return invoke<ApiConnection | null>("get_api_connection");
 }
 
-export type TrayState = {
-  unreadCount: number;
-  tooltipText: string;
-  openMenuLabel: string;
-  quitMenuLabel: string;
-};
-
-/** Count next to the tray icon plus localized tooltip and menu. In the browser, mirrors the count in the tab title. */
-export async function updateTray(trayState: TrayState): Promise<void> {
-  if (!isRunningInTauri()) {
-    document.title = trayState.unreadCount > 0 ? `(${trayState.unreadCount}) Speed News` : "Speed News";
-    return;
-  }
-  await invoke("update_tray", trayState);
+/**
+ * The native tray is fed by the Go sidecar, not by the UI (the popover webview is destroyed while
+ * hidden). In the browser there is no tray, so the count goes to the tab title instead.
+ */
+export function mirrorUnreadCountInTitle(indicatedCount: number): void {
+  if (isRunningInTauri()) return;
+  document.title = indicatedCount > 0 ? `(${indicatedCount}) Speed News` : "Speed News";
 }
 
-/** Mirrors the "close when clicking outside" setting into the native shell. */
-export async function setCloseOnFocusLoss(isEnabled: boolean): Promise<void> {
+/** The locale the UI uses for "system", so the tray texts match the popover. */
+export async function reportSystemLocale(systemLocale: string): Promise<void> {
   if (isRunningInTauri()) {
-    await invoke("set_close_on_focus_loss", { isEnabled });
+    await invoke("report_system_locale", { systemLocale });
   }
 }
 
@@ -83,6 +76,15 @@ export function onUpdateReady(onReady: (updateReady: UpdateReady) => void): () =
     isStopped = true;
     stopListening?.();
   };
+}
+
+/**
+ * The update already downloaded for a .deb/.rpm install, if any. Asked on mount because the
+ * "update-ready" event is lost when it fires while the popover webview does not exist.
+ */
+export async function getPendingUpdate(): Promise<UpdateReady | null> {
+  if (!isRunningInTauri()) return null;
+  return invoke<UpdateReady | null>("pending_update");
 }
 
 /** Installs the downloaded update (system password prompt on .deb/.rpm), then restarts. */

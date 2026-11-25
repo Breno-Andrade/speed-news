@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import rustTrayTexts from "../../../src-tauri/src/tray_texts.rs?raw";
 import { describeLanguage, resolveLocalizedContent, resolvePreferredLocale } from "./messages";
 
 describe("resolvePreferredLocale", () => {
@@ -35,5 +36,22 @@ describe("describeLanguage", () => {
     expect(describeLanguage("pt", "pt-BR")).toBe("Português");
     expect(describeLanguage("en", "pt-BR")).toBe("Inglês");
     expect(describeLanguage("pt", "en")).toBe("Portuguese");
+  });
+});
+
+// The tray is drawn by the native shell while the popover webview does not exist, so its texts
+// are duplicated in Rust. They must stay identical to the ones the popover uses.
+describe("tray texts in the native shell", () => {
+  it.each(["pt-BR", "en"])("match the %s messages", (locale) => {
+    const { messages } = resolveLocalizedContent(locale);
+    expect(rustTrayTexts).toContain(`"${messages.trayOpenMenuLabel}"`);
+    expect(rustTrayTexts).toContain(`"${messages.trayQuitMenuLabel}"`);
+    expect(rustTrayTexts).toContain(`"${messages.trayTooltip(0)}"`);
+    // Plural form, with Rust's format! placeholder in place of the number.
+    expect(rustTrayTexts).toContain(`"${messages.trayTooltip(7).replace("7", "{unread_count}")}"`);
+  });
+
+  it("matches the Portuguese singular", () => {
+    expect(rustTrayTexts).toContain(`"${resolveLocalizedContent("pt-BR").messages.trayTooltip(1)}"`);
   });
 });

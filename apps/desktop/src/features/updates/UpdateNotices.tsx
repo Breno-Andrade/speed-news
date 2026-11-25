@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocale } from "../../shared/i18n/LocaleProvider";
-import { getAppVersion, installPendingUpdate, onUpdateReady, type UpdateReady } from "../../shared/platform/tauriBridge";
+import { getAppVersion, getPendingUpdate, installPendingUpdate, onUpdateReady, type UpdateReady } from "../../shared/platform/tauriBridge";
 
 const LAST_SEEN_VERSION_KEY = "speed-news:last-seen-version";
 const UPDATED_NOTICE_MS = 6000;
@@ -40,6 +40,12 @@ export function UpdateNotices() {
         // First run ever: nothing was "updated", just remember the version.
         if (lastSeenVersion && lastSeenVersion !== appVersion) setUpdatedToVersion(appVersion);
         saveLastSeenVersion(appVersion);
+      })
+      .catch(() => undefined);
+    // The webview may have been created after the download finished: ask, then keep listening.
+    getPendingUpdate()
+      .then((pendingUpdate) => {
+        if (pendingUpdate) setReadyUpdate(pendingUpdate);
       })
       .catch(() => undefined);
     return onUpdateReady(setReadyUpdate);

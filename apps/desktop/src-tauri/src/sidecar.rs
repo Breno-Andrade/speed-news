@@ -1,5 +1,5 @@
-//! Starts apps/api as a sidecar on a random loopback port with a random token,
-//! and hands both to the UI through the `get_api_connection` command.
+//! Starts apps/api as a sidecar on a random loopback port with a random token, hands both to the
+//! UI through the `get_api_connection` command, and feeds the tray from the sidecar's stdout.
 
 use std::sync::Mutex;
 
@@ -8,8 +8,12 @@ use tauri::{AppHandle, Manager, State};
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
 
+use crate::tray::{self, SidecarTrayState};
+
 /// Printed by the Go binary on stdout once it is listening (see cmd/news-api/main.go).
 const READY_LINE_PREFIX: &str = "SPEED_NEWS_API_READY port=";
+/// Followed by the tray state as JSON (Go: shellbridge.TrayStateLinePrefix).
+const TRAY_LINE_PREFIX: &str = "SPEED_NEWS_TRAY ";
 
 /// Webview origins allowed by the backend CORS policy (dev server, Linux/macOS, Windows).
 const ALLOWED_ORIGINS: &str = "http://localhost:1420,tauri://localhost,http://tauri.localhost";
@@ -25,6 +29,25 @@ pub struct ApiConnection {
 pub struct SidecarState {
     api_connection: Mutex<Option<ApiConnection>>,
     sidecar_child: Mutex<Option<CommandChild>>,
+}
+
+/// One meaningful stdout line of the sidecar.
+#[derive(Debug, PartialEq, Eq)]
+enum SidecarLine {
+    Ready { port: u16 },
+    TrayState(SidecarTrayState),
+}
+
+/// Lines that are not part of the contract (or malformed) are ignored.
+fn parse_sidecar_line(output_line: &str) -> Option<SidecarLine> {
+    let trimmed_line = output_line.trim();
+    if let Some(port_text) = trimmed_line.strip_prefix(READY_LINE_PREFIX) {
+        return port_text.trim().parse().ok().map(|port| SidecarLine::Ready { port });
+    }
+    if let Some(state_json) = trimmed_line.strip_prefix(TRAY_LINE_PREFIX) {
+        return serde_json::from_str(state_json).ok().map(SidecarLine::TrayState);
+    }
+    None
 }
 
 /// Returns `None` while the sidecar is still starting; the UI polls until it is ready.
@@ -43,6 +66,7 @@ pub fn start_sidecar(application_handle: &AppHandle) -> Result<(), Box<dyn std::
 
     let sidecar_arguments: Vec<String> = vec![
         "--exit-on-stdin-close".into(),
+        "--report-tray-state".into(),
         "--data-dir".into(),
         data_directory.to_string_lossy().into_owned(),
         "--allowed-origins".into(),
@@ -65,17 +89,22 @@ pub fn start_sidecar(application_handle: &AppHandle) -> Result<(), Box<dyn std::
         while let Some(command_event) = event_receiver.recv().await {
             match command_event {
                 CommandEvent::Stdout(output_bytes) => {
-                    let output_line = String::from_utf8_lossy(&output_bytes);
-                    if let Some(port_text) = output_line.trim().strip_prefix(READY_LINE_PREFIX) {
-                        let api_connection = ApiConnection {
-                            base_url: format!("http://127.0.0.1:{}", port_text.trim()),
-                            token: api_token.clone(),
-                        };
-                        if let Ok(mut connection_guard) =
-                            event_application_handle.state::<SidecarState>().api_connection.lock()
-                        {
-                            *connection_guard = Some(api_connection);
+                    match parse_sidecar_line(&String::from_utf8_lossy(&output_bytes)) {
+                        Some(SidecarLine::Ready { port }) => {
+                            let api_connection = ApiConnection {
+                                base_url: format!("http://127.0.0.1:{port}"),
+                                token: api_token.clone(),
+                            };
+                            if let Ok(mut connection_guard) =
+                                event_application_handle.state::<SidecarState>().api_connection.lock()
+                            {
+                                *connection_guard = Some(api_connection);
+                            }
                         }
+                        Some(SidecarLine::TrayState(sidecar_tray_state)) => {
+                            tray::apply_sidecar_state(&event_application_handle, sidecar_tray_state);
+                        }
+                        None => {}
                     }
                 }
                 CommandEvent::Stderr(output_bytes) => {
@@ -106,5 +135,40 @@ pub fn stop_sidecar(application_handle: &AppHandle) {
         .and_then(|mut child_guard| child_guard.take());
     if let Some(sidecar_child) = sidecar_child {
         let _ = sidecar_child.kill();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ready_line_gives_the_port() {
+        assert_eq!(
+            parse_sidecar_line("SPEED_NEWS_API_READY port=4317\n"),
+            Some(SidecarLine::Ready { port: 4317 })
+        );
+    }
+
+    #[test]
+    fn tray_line_gives_the_full_state() {
+        // Exactly what shellbridge.FormatTrayStateLine writes (Go test: tray_state_test.go).
+        let tray_line = r#"SPEED_NEWS_TRAY {"unreadCount":2,"showUnreadIndicator":false,"interfaceLanguage":"en","closeOnFocusLoss":false}"#;
+        assert_eq!(
+            parse_sidecar_line(tray_line),
+            Some(SidecarLine::TrayState(SidecarTrayState {
+                unread_count: 2,
+                show_unread_indicator: false,
+                interface_language: "en".into(),
+                close_on_focus_loss: false,
+            }))
+        );
+    }
+
+    #[test]
+    fn unrelated_or_malformed_lines_are_ignored() {
+        assert_eq!(parse_sidecar_line("hello"), None);
+        assert_eq!(parse_sidecar_line("SPEED_NEWS_API_READY port=abc"), None);
+        assert_eq!(parse_sidecar_line("SPEED_NEWS_TRAY {not json"), None);
     }
 }

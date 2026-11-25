@@ -8,10 +8,11 @@ const placeholderRows = [
   { titleWidth: "90%", secondLineWidth: "40%", hasThumbnail: false },
 ];
 
-/** Same geometry as a news item, so nothing jumps when the real list arrives. */
+/** Same geometry as a news item, so nothing jumps when the real list arrives. Shown at once (it
+ *  continues the startup skeleton), so it does not fade in. */
 export function NewsListSkeleton({ label }: { label: string }) {
   return (
-    <SkeletonGroup label={label}>
+    <SkeletonGroup label={label} className="skeleton-group--instant">
       <ul className="news-list">
         {placeholderRows.map((placeholderRow, rowIndex) => (
           <li key={rowIndex} className="news-item news-item--skeleton">

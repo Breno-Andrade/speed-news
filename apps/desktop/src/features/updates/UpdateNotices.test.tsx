@@ -8,6 +8,7 @@ import { UpdateNotices } from "./UpdateNotices";
 
 const bridgeMocks = vi.hoisted(() => ({
   getAppVersion: vi.fn<() => Promise<string | null>>(),
+  getPendingUpdate: vi.fn<() => Promise<UpdateReady | null>>(),
   installPendingUpdate: vi.fn<() => Promise<void>>(),
   onUpdateReady: vi.fn<(onReady: (updateReady: UpdateReady) => void) => () => void>(),
 }));
@@ -26,6 +27,7 @@ function renderNotices() {
 beforeEach(() => {
   window.localStorage.clear();
   bridgeMocks.getAppVersion.mockResolvedValue("0.2.0");
+  bridgeMocks.getPendingUpdate.mockResolvedValue(null);
   bridgeMocks.installPendingUpdate.mockResolvedValue(undefined);
   bridgeMocks.onUpdateReady.mockImplementation((onReady) => {
     announceUpdateReady = onReady;
@@ -47,6 +49,14 @@ describe("UpdateNotices", () => {
     expect(await screen.findByText("✓ Atualizado para a versão 0.2.0")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Fechar aviso" }));
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  // The popover webview is destroyed while hidden: an update downloaded meanwhile announced
+  // itself to nobody, so a freshly created popover must still offer it.
+  it("offers an update that was downloaded while the popover did not exist", async () => {
+    bridgeMocks.getPendingUpdate.mockResolvedValue({ version: "0.3.0", requiresPassword: true });
+    renderNotices();
+    expect(await screen.findByText("Versão 0.3.0 pronta")).toBeInTheDocument();
   });
 
   it("offers to install a downloaded update on .deb/.rpm, warning about the password", async () => {

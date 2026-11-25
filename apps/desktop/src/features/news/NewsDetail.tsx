@@ -132,7 +132,7 @@ function NewsHero({ article }: { article: Article }) {
   if (article.imageUrl && !imageFailed) {
     return (
       <div className="news-hero">
-        <FadeInImage className="news-hero__image" src={article.imageUrl} alt="" referrerPolicy="no-referrer" onLoadFailed={() => setImageFailed(true)} />
+        <FadeInImage className="news-hero__image" src={article.imageUrl} alt="" decoding="async" referrerPolicy="no-referrer" onLoadFailed={() => setImageFailed(true)} />
       </div>
     );
   }

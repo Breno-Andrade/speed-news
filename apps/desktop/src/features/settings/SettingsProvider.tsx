@@ -3,7 +3,7 @@ import { useApiClient } from "../../shared/api/ApiProvider";
 import type { UserSettings } from "../../shared/api/types";
 import { detectSystemLocale, LocaleProvider } from "../../shared/i18n/LocaleProvider";
 import { resolvePreferredLocale } from "../../shared/i18n/messages";
-import { setCloseOnFocusLoss } from "../../shared/platform/tauriBridge";
+import { reportSystemLocale } from "../../shared/platform/tauriBridge";
 import { detectSystemTimeZone, resolveEffectiveTimeZone } from "../../shared/time/timeZone";
 
 const defaultUserSettings: UserSettings = {
@@ -37,10 +37,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       .catch(() => undefined);
   }, [apiClient]);
 
-  // The native shell decides whether to hide on focus loss, so it must know the saved choice.
+  // "Close when clicking outside" reaches the native shell through the sidecar (tray state),
+  // so it applies before the popover ever loads. The system locale is only known here.
   useEffect(() => {
-    setCloseOnFocusLoss(userSettings.closeOnFocusLoss).catch(() => undefined);
-  }, [userSettings.closeOnFocusLoss]);
+    reportSystemLocale(systemLocale).catch(() => undefined);
+  }, [systemLocale]);
 
   // "Automatic" options must follow the computer while the app keeps running:
   // re-detect time zone and language every time the popover gains focus.

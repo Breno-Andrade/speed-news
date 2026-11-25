@@ -1,6 +1,6 @@
 # Speed News — visão geral do projeto
 
-> Retrato do projeto em 24/11/2026 (commit `7f989de`). Explica o que existe, como as peças se encaixam, as regras da casa e por que cada decisão foi tomada.
+> Retrato do projeto em 25/11/2026. Para a ordem em que as coisas acontecem, veja [fluxos.md](fluxos.md). Explica o que existe, como as peças se encaixam, as regras da casa e por que cada decisão foi tomada.
 
 ---
 
@@ -63,8 +63,8 @@ Um **widget de bandeja** (não uma janela comum) que reúne notícias de Fórmul
 
 1. O Tauri inicia o sidecar Go numa **porta aleatória**, passando um **token aleatório** por variável de ambiente.
 2. O Go imprime `SPEED_NEWS_API_READY port=NNNN`; o Rust lê essa linha e entrega porta e token à interface.
-3. A interface chama a API HTTP com `Authorization: Bearer <token>` e recebe o contador em tempo real por **SSE** (`/events`).
-4. A interface repassa o contador ao Rust (`update_tray`), que atualiza o ícone e o serviço D-Bus lido pela extensão do GNOME.
+3. O Go também imprime `SPEED_NEWS_TRAY {json}` sempre que o contador ou uma configuração da bandeja muda; o Rust atualiza o ícone, o menu e o serviço D-Bus lido pela extensão do GNOME. A bandeja **não depende da interface**.
+4. A interface (só existe com o popover aberto, mais 60 s) chama a API HTTP com `Authorization: Bearer <token>` e recebe o contador por **SSE** (`/events`).
 5. Ao fechar o app, o Rust encerra o sidecar. Se o app cair, o Go percebe o stdin fechado e encerra sozinho.
 
 ---
@@ -75,7 +75,7 @@ Um **widget de bandeja** (não uma janela comum) que reúne notícias de Fórmul
 |---|---|---|
 | Backend | **Go 1.27** (módulo declara 1.26.1) | biblioteca padrão (`net/http`, `log/slog`), `gofeed` 1.5 (RSS), `modernc.org/sqlite` 1.63 (SQLite em Go puro, sem CGO), `yaml.v3` |
 | Interface | **TypeScript 5.8** + **React 19** | Vite 6 (build/dev server), CSS puro com variáveis (sem framework de CSS), `Intl` nativo para datas, fusos e idiomas |
-| Casca nativa | **Rust 1.100** | **Tauri 2.12**, `tauri-plugin-updater` 2.14, `-shell`, `-opener`, `-positioner`, `tray-icon` 0.25 com backend **`ksni`** 0.3, `zbus` 5.19 (D-Bus) |
+| Casca nativa | **Rust 1.100** | **Tauri 2.12**, `tauri-plugin-updater` 2.14, `-shell`, `-opener`, `tray-icon` 0.25 com backend **`ksni`** 0.3, `zbus` 5.19 (D-Bus) |
 | Extensão GNOME | **JavaScript (GJS, módulos ES)** | GNOME Shell 45–50 (`St`, `Clutter`, `Gio`, `PanelMenu`) |
 | Ferramentas | Go / Node | `tools/icon-generator` (gera os ícones), scripts Node (sidecar, mapeamento fuso→país) |
 
@@ -97,32 +97,32 @@ speed-news/
 │   │       ├── app/                 #   monta tudo (URLs das fontes configuráveis)
 │   │       ├── domain/              #   entidades: Article, RaceEvent, UserSettings…
 │   │       ├── sources/             #   lista de fontes (default_sources.yaml)
-│   │       ├── ingestion/
-│   │       │   ├── fetchers/rss/    #     baixa e lê feeds (+ imagem fora dos campos)
-│   │       │   ├── pipeline/        #     normaliza: título, resumo, link canônico, id
-│   │       │   ├── enrichment/shareimage/ # og:image para fontes sem imagem no feed
-│   │       │   └── scheduler/       #     agendador (notícias e calendário separados)
-│   │       ├── news/                #   serviço de notícias (contador, lido/não lido)
-│   │       ├── calendar/jolpica/    #   cliente Jolpica: calendário e resultados
-│   │       ├── circuits/            #   traçados GeoJSON → SVG, ficha do circuito
-│   │       ├── forecast/openmeteo/  #   previsão do tempo por sessão
+│   │       ├── providers/           #   tudo o que acessa a internet
+│   │       │   ├── rss/             #     feeds (+ imagem fora dos campos)
+│   │       │   ├── ogimage/         #     og:image para fontes sem imagem no feed
+│   │       │   ├── jolpica/         #     calendário e resultados
+│   │       │   ├── f1circuits/      #     traçados GeoJSON → SVG, ficha do circuito
+│   │       │   └── openmeteo/       #     previsão do tempo por sessão
+│   │       ├── news/                #   serviço de notícias + normalização dos feeds
 │   │       ├── raceweekend/         #   "qual é o GP da semana", modo fim de semana
 │   │       ├── raceinsights/        #   abas Último GP, Pista e Clima (com cache)
-│   │       ├── notifier/            #   transmite o contador (SSE)
-│   │       ├── httpapi/             #   rotas, token, CORS, SSE
-│   │       ├── storage/sqlite/      #   banco, migrações, cache de APIs
+│   │       ├── jobs/                #   agendador (notícias e calendário separados)
+│   │       ├── notifier/            #   transmite o contador (SSE e bandeja)
+│   │       ├── shellbridge/         #   estado da bandeja no stdout para o Tauri
+│   │       ├── httpapi/             #   rotas por assunto, token, CORS, SSE
+│   │       ├── storage/sqlite/      #   banco por agregado, migrações, manutenção
 │   │       └── fixtures/            #   o "mundo falso" usado pelos testes
 │   └── desktop/
 │       ├── src/                     # Interface React
 │       │   ├── features/            #   news, race-weekend, settings, updates
 │       │   ├── shared/              #   api (cliente), i18n, time (fusos), ui, platform (ponte Tauri)
 │       │   └── test/                #   cliente de API falso e helpers de teste
-│       ├── src-tauri/               # Rust: lib.rs, tray.rs, sidecar.rs, panel_bridge.rs, updates.rs
+│       ├── src-tauri/               # Rust: lib.rs, popover.rs, placement.rs, tray.rs, tray_texts.rs, sidecar.rs, panel_bridge.rs, updates.rs
 │       ├── gnome-shell-extension/   # botão da barra do GNOME
 │       ├── e2e/                     # testes Playwright
 │       └── scripts/                 # build do sidecar, geração fuso→país
-├── tools/icon-generator/            # gera ícones do app e do tray
-├── scripts/                         # setup-linux.sh, check-go-coverage.sh
+├── tools/icon-generator/            # fonte única dos ícones: app, bandeja (claro/escuro) e botão do GNOME
+├── scripts/                         # setup-linux.sh, check-go-coverage.sh, measure-memory.sh/.ps1
 ├── .devcontainer/  .github/workflows/  docs/
 ├── Makefile  go.work  package.json  rust-toolchain.toml  .mise.toml  .golangci.yml
 └── CLAUDE.md  README.md  LICENSE (AGPL-3.0)
@@ -169,13 +169,16 @@ speed-news/
 | Retenção de notícias | 30 dias |
 | Cache: Último GP / Pista / Clima | 3 h / 24 h / 1 h; previsão só a partir de 7 dias antes da corrida |
 | Busca de `og:image` | só fontes marcadas; no máximo 12 páginas por atualização; cada página uma única vez |
+| Após cada busca de notícias | checkpoint do WAL, fecha conexões ociosas, devolve memória ao sistema |
+| Manutenção diária do banco | apaga `api_cache` com mais de 30 dias, `incremental_vacuum`, `PRAGMA optimize` |
+| Webview do popover | destruída 60 s depois de fechada; recriada no próximo clique |
 
 ### Resiliência (decisões que já evitaram bugs reais)
 
 - **Notícias e calendário rodam em ciclos independentes.** Antes, a Jolpica fora do ar segurava as notícias por até 60 s.
 - **Fonte fora do ar → dado antigo do cache**, nunca tela de erro.
 - **Resultado parcial é exibido, mas não fica no cache.**
-- **Buscas iguais e simultâneas viram uma só** (trava por chave de cache).
+- **Buscas iguais e simultâneas viram uma só** (trava por chave de cache, que se apaga quando ninguém mais espera).
 - **Uma fonte quebrada não derruba as outras** (busca em paralelo, erro isolado).
 
 ---
@@ -186,9 +189,12 @@ speed-news/
 
 | Arquivo | Responsabilidade |
 |---|---|
-| `lib.rs` | registra plugins, comandos e eventos da janela (fechar ao perder foco) |
-| `sidecar.rs` | inicia o Go com porta e token aleatórios e entrega a conexão à interface |
-| `tray.rs` | ícone, menu, abrir/fechar a janela, posição sob o botão, proteção "fecha e reabre" |
+| `lib.rs` | registra plugins, comandos e eventos da janela; impede que destruir a janela encerre o app |
+| `sidecar.rs` | inicia o Go com porta e token aleatórios, entrega a conexão à interface e lê o estado da bandeja do stdout |
+| `popover.rs` | cria a janela sob demanda, mostra/esconde, destrói após 60 s escondida, proteção "fecha e reabre" |
+| `placement.rs` | onde o popover abre: monitor da âncora, área útil, acima/abaixo, escala por monitor (funções puras) |
+| `tray.rs` | ícone (claro/escuro, ponto vermelho), tooltip e menu a partir do estado vindo do Go |
+| `tray_texts.rs` | textos da bandeja em PT/EN (espelho de `messages.ts`, com teste de paridade) e idioma do sistema |
 | `panel_bridge.rs` | serviço D-Bus `dev.speednews.Desktop1` para a extensão do GNOME (Linux) |
 | `updates.rs` | atualização automática (silenciosa ou "pergunta antes", conforme o formato) |
 
@@ -233,7 +239,7 @@ Adicionar uma fonte de notícias é **só uma entrada em `default_sources.yaml`*
 4. **Nova fonte = nova entrada no YAML**, e também nas fixtures dos testes.
 5. **Escopo atual: só F1**, mas as entidades guardam `SeriesSlug` para o WEC entrar depois.
 6. **Testes nunca acessam fontes reais**: usam o servidor de fixtures.
-7. **Os pisos de cobertura só sobem** (Go 78%, frontend em `vite.config.ts`).
+7. **Os pisos de cobertura só sobem** (Go 80%, frontend em `vite.config.ts`).
 8. **A interface D-Bus `dev.speednews.Desktop1` não pode quebrar compatibilidade**, porque a extensão do GNOME é atualizada separadamente do app.
 9. **Os dados precisam sobreviver às atualizações**: mudanças no banco passam por `addedColumns`, e campos novos de configuração precisam de valor padrão.
 10. **A versão do app mora só em `apps/desktop/package.json`.**
@@ -260,9 +266,9 @@ Adicionar uma fonte de notícias é **só uma entrada em `default_sources.yaml`*
 
 | Camada | Quantidade | O que cobre |
 |---|---|---|
-| Go | 61 funções de teste (+ subtestes), **cobertura 82%** | serviços, clientes HTTP, banco/migrações e o **backend inteiro** subindo contra as fixtures |
-| Frontend | **93 testes**, **cobertura 85%** das linhas | formatação, fusos, telas (lista, notícia, configurações, card, avisos de atualização) |
-| Rust | 12 | posição da janela, "fecha e reabre", regra de atualização silenciosa ou "pergunta antes" |
+| Go | 82 funções de teste (+ subtestes), **cobertura 82%** | serviços, clientes HTTP, banco/migrações/manutenção, contrato de stdout da bandeja, ícones gerados, o **backend inteiro** contra as fixtures e um teste de estabilidade (dezenas de ciclos sem crescer) |
+| Frontend | **117 testes**, **cobertura 85%** das linhas | formatação, fusos, telas (lista, notícia, configurações, card, avisos de atualização), paridade dos textos da bandeja com o Rust |
+| Rust | 42 | posição da janela, "fecha e reabre", ciclo de vida da janela (destruição cancelada ao reabrir, sair só explicitamente), leitura do stdout do Go, textos/idioma da bandeja, variantes do ícone, regra de atualização |
 | E2E (Playwright) | 9, em **Chromium e WebKit** | app real no navegador: contador, leitura, abas, idiomas, notícia nova, fonte fora do ar, regressões visuais |
 
 **O servidor de fixtures** (`internal/fixtures`) imita todas as fontes externas:
@@ -273,7 +279,7 @@ Adicionar uma fonte de notícias é **só uma entrada em `default_sources.yaml`*
 - lint do Go e cobertura mínima;
 - lint, tipos e cobertura do frontend;
 - E2E em dois motores;
-- `rustfmt`, `clippy` com avisos tratados como erro, e testes do Rust.
+- `rustfmt`, `clippy` com avisos tratados como erro, e testes do Rust **em Linux, Windows e macOS** (o código da bandeja tem partes por plataforma).
 
 **Release** (`release.yml`): roda ao criar uma tag `v*`.
 
@@ -299,6 +305,8 @@ Adicionar uma fonte de notícias é **só uma entrada em `default_sources.yaml`*
 | `make test` | testes rápidos (Go, frontend, Rust) |
 | `make test-e2e` | E2E no navegador |
 | `make check` | tudo o que a CI roda |
+| `make measure-memory` | memória do app em execução por grupo (casca, webview, sidecar) |
+| `make icons` | regera todos os ícones a partir de `tools/icon-generator` |
 | `make install-gnome-extension` | instala o botão da barra (depois: Alt+F2 → `r`) |
 | `make setup-linux` | prepara uma máquina Debian/Ubuntu do zero |
 | `make docker-check` | lint e testes dentro do contêiner, sem instalar nada |

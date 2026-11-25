@@ -24,6 +24,9 @@ const MAXIMUM_SHOWN_COUNT = 99;
 // Must match "title" of the main window in src-tauri/tauri.conf.json.
 const APP_WINDOW_TITLE = "Speed News";
 const FOCUS_RETRY_INTERVAL_MS = 50;
+// The app creates its window on demand (it is destroyed while hidden to save memory), so the
+// first open after a while takes longer to map than a reused window: keep trying for 5 s.
+const FOCUS_RETRY_ATTEMPTS = 100;
 
 const desktopInterfaceXml = `
 <node>
@@ -123,7 +126,7 @@ const SpeedNewsButton = GObject.registerClass(
      */
     _focusAppWindowWhenShown() {
       this._cancelFocusTimer();
-      let remainingAttempts = 20;
+      let remainingAttempts = FOCUS_RETRY_ATTEMPTS;
       this._focusTimerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, FOCUS_RETRY_INTERVAL_MS, () => {
         const appWindow = global
           .get_window_actors()

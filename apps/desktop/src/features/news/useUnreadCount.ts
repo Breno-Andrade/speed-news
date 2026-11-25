@@ -1,19 +1,17 @@
 import { useEffect, useState } from "react";
 import { useApiClient } from "../../shared/api/ApiProvider";
-import { useLocale } from "../../shared/i18n/LocaleProvider";
-import { updateTray } from "../../shared/platform/tauriBridge";
+import { mirrorUnreadCountInTitle } from "../../shared/platform/tauriBridge";
 import { useSettings } from "../settings/SettingsProvider";
 
 /**
- * Listens to the backend event stream and mirrors the unread count on the tray icon.
- * The webview stays alive while the popover is hidden, so the tray keeps updating.
- * Tray texts (tooltip, menu) follow the interface language.
- * With "show new stories on the icon" off, the tray and panel button get 0 (no count, no dot);
- * the returned count (popover header) and the tooltip keep the real number.
+ * Listens to the backend event stream for the popover header count.
+ * The native tray does not depend on this hook: the Go sidecar reports the tray state to the
+ * shell directly, because the webview is destroyed while the popover is hidden.
+ * In the browser (no tray) the tab title mirrors what the tray would show: nothing when
+ * "show new stories on the icon" is off.
  */
 export function useUnreadCount(): number {
   const apiClient = useApiClient();
-  const { messages } = useLocale();
   const { userSettings } = useSettings();
   const { showUnreadIndicator } = userSettings;
   const [unreadCount, setUnreadCount] = useState(0);
@@ -32,13 +30,8 @@ export function useUnreadCount(): number {
   }, [apiClient]);
 
   useEffect(() => {
-    updateTray({
-      unreadCount: showUnreadIndicator ? unreadCount : 0,
-      tooltipText: messages.trayTooltip(unreadCount),
-      openMenuLabel: messages.trayOpenMenuLabel,
-      quitMenuLabel: messages.trayQuitMenuLabel,
-    }).catch(() => undefined);
-  }, [unreadCount, showUnreadIndicator, messages]);
+    mirrorUnreadCountInTitle(showUnreadIndicator ? unreadCount : 0);
+  }, [unreadCount, showUnreadIndicator]);
 
   return unreadCount;
 }

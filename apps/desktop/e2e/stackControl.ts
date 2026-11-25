@@ -10,6 +10,7 @@ export const defaultSettings = {
   interfaceLanguage: "system",
   newsLanguageCodes: [],
   closeOnFocusLoss: true,
+  showUnreadIndicator: true,
 };
 
 /** Every test starts from the same world: default settings and the initial fixture feeds. */

@@ -66,6 +66,8 @@ export type Messages = {
   windowBehaviorTitle: string;
   closeOnFocusLoss: string;
   closeOnFocusLossHint: string;
+  showUnreadIndicator: string;
+  showUnreadIndicatorHint: string;
   launchAtLogin: string;
   launchAtLoginHint: string;
   readFullArticle: string;
@@ -202,6 +204,8 @@ const portugueseMessages: Messages = {
   windowBehaviorTitle: "Janela",
   closeOnFocusLoss: "Fechar ao clicar fora",
   closeOnFocusLossHint: "Desligado, a janela fecha só pelo ícone na barra ou pela tecla Esc.",
+  showUnreadIndicator: "Indicar notícias novas no ícone",
+  showUnreadIndicatorHint: "Desligado, o ícone na barra não mostra o número de notícias novas.",
   launchAtLogin: "Iniciar com o computador",
   launchAtLoginHint: "Fica na barra desde o login, sem abrir janela. Desligado, as notícias só chegam com o app aberto.",
   readFullArticle: "Ler matéria completa",
@@ -336,6 +340,8 @@ const englishMessages: Messages = {
   windowBehaviorTitle: "Window",
   closeOnFocusLoss: "Close when clicking outside",
   closeOnFocusLossHint: "When off, the window only closes from the panel icon or the Esc key.",
+  showUnreadIndicator: "Show new stories on the icon",
+  showUnreadIndicatorHint: "When off, the panel icon does not show how many new stories there are.",
   launchAtLogin: "Start with the computer",
   launchAtLoginHint: "Sits in the panel from login, without opening a window. When off, news only arrives while the app is open.",
   readFullArticle: "Read full article",

@@ -264,7 +264,8 @@ func TestUserSettingsDefaultAndRoundTrip(test *testing.T) {
 		InterfaceLanguage:  domain.InterfaceLanguageEnglish,
 		NewsLanguageCodes:  []string{"pt"},
 		// The default is true: a saved false must survive loading over the defaults.
-		CloseOnFocusLoss: false,
+		CloseOnFocusLoss:    false,
+		ShowUnreadIndicator: false,
 	}
 	if err := store.SaveUserSettings(ctx, customSettings); err != nil {
 		test.Fatal(err)
@@ -288,6 +289,7 @@ func TestSettingsSavedBeforeLanguagesExistedGetDefaults(test *testing.T) {
 		test.Fatal(err)
 	}
 	if userSettings.InterfaceLanguage != domain.InterfaceLanguageSystem || userSettings.NewsLanguageCodes == nil || !userSettings.CloseOnFocusLoss ||
+		!userSettings.ShowUnreadIndicator ||
 		userSettings.TimeZonePreference.TimeZoneID != "Europe/Lisbon" {
 		test.Errorf("old settings must keep the time zone and get language defaults, got %+v", userSettings)
 	}

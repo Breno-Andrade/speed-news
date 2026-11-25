@@ -83,6 +83,7 @@ export function createFakeApiClient(fakeApiOptions: FakeApiOptions = {}) {
     interfaceLanguage: "pt-BR",
     newsLanguageCodes: [],
     closeOnFocusLoss: true,
+    showUnreadIndicator: true,
     ...fakeApiOptions.settings,
   };
   const insight = async <Payload>(payload: Payload) => {

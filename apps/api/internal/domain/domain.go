@@ -216,14 +216,17 @@ type UserSettings struct {
 	NewsLanguageCodes []string `json:"newsLanguageCodes"`
 	// CloseOnFocusLoss hides the popover when the user clicks anywhere else (popover behaviour).
 	CloseOnFocusLoss bool `json:"closeOnFocusLoss"`
+	// ShowUnreadIndicator shows the unread count (or dot) next to the tray icon / panel button.
+	ShowUnreadIndicator bool `json:"showUnreadIndicator"`
 }
 
 // DefaultUserSettings is used before the user changes anything (and fills fields missing from older saves).
 func DefaultUserSettings() UserSettings {
 	return UserSettings{
-		TimeZonePreference: TimeZonePreference{Mode: "system"},
-		InterfaceLanguage:  InterfaceLanguageSystem,
-		NewsLanguageCodes:  []string{},
-		CloseOnFocusLoss:   true,
+		TimeZonePreference:  TimeZonePreference{Mode: "system"},
+		InterfaceLanguage:   InterfaceLanguageSystem,
+		NewsLanguageCodes:   []string{},
+		CloseOnFocusLoss:    true,
+		ShowUnreadIndicator: true,
 	}
 }

@@ -55,6 +55,17 @@ describe("SettingsPanel", () => {
     expect(await screen.findByRole("status")).toHaveTextContent("Salvo");
   });
 
+  it("saves the 'show new stories on the icon' choice", async () => {
+    const userInteraction = userEvent.setup();
+    const { fakeApiClient } = renderWithProviders(<SettingsPanel />);
+
+    const indicatorSwitch = await screen.findByRole("switch", { name: /Indicar notícias novas no ícone/ });
+    await waitFor(() => expect(indicatorSwitch).toBeChecked());
+    await userInteraction.click(indicatorSwitch);
+    expect(fakeApiClient.saveSettings).toHaveBeenLastCalledWith(expect.objectContaining({ showUnreadIndicator: false }));
+    expect(indicatorSwitch).not.toBeChecked();
+  });
+
   it("reverts the optimistic change and tells the user when saving fails", async () => {
     const userInteraction = userEvent.setup();
     const fakeApiClient = createFakeApiClient();

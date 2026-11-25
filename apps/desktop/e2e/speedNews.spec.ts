@@ -2,7 +2,7 @@
 // external source. Fixture world: "GP de Singapura" two days ahead (race week), last race in
 // Las Vegas, 3 unread English stories + 2 Portuguese ones (+ one old story already read).
 import { expect, test, type Page } from "@playwright/test";
-import { restoreInitialReadState, publishFixtureStory, resetStack, setFixtureOutage, unreadCountFromApi } from "./stackControl";
+import { restoreInitialReadState, publishFixtureStory, resetStack, saveSettings, setFixtureOutage, unreadCountFromApi } from "./stackControl";
 
 test.beforeEach(async ({ request }) => {
   await resetStack(request);
@@ -158,4 +158,43 @@ test("first paint is the app skeleton, and the content replaces it in place", as
 
   expect(Math.abs(skeletonToolbarTop - staticToolbarTop)).toBeLessThanOrEqual(2);
   expect(Math.abs(contentToolbarTop - skeletonToolbarTop)).toBeLessThanOrEqual(2);
+});
+
+// Cold open with the system in English and the app saved in Portuguese, the backend answering
+// slowly: every DOM change from the first frame on is inspected. The interface used to show the
+// system language first and flip once the settings arrived, and the unread count (pushed within
+// milliseconds) popped into the header ahead of the list (regression).
+test("a cold open never shows the system language or the count ahead of the list", async ({ browser, request }) => {
+  await saveSettings(request, { interfaceLanguage: "pt-BR" });
+  const englishSystemContext = await browser.newContext({ locale: "en-US", viewport: { width: 380, height: 640 } });
+  const page = await englishSystemContext.newPage();
+
+  await page.addInitScript(() => {
+    const startupViolations: string[] = [];
+    Object.assign(window, { startupViolations });
+    // Words only the English interface shows (fixture headlines avoid them).
+    const englishInterfaceWords = /\b(Unread|Schedule|Mark all as read|Refresh)\b/;
+    const recordViolations = () => {
+      if (!document.body) return;
+      const hasArticleList = document.querySelector(".news-item:not(.news-item--skeleton)") !== null;
+      const englishWord = englishInterfaceWords.exec(document.body.innerText);
+      if (englishWord) startupViolations.push(`system language shown: "${englishWord[0]}"`);
+      if (!hasArticleList && document.querySelector(".unread-pill")) startupViolations.push("unread count shown before the list");
+    };
+    new MutationObserver(recordViolations).observe(document, { subtree: true, childList: true, characterData: true, attributes: true });
+  });
+  // A slow backend gives any guess plenty of time to reach the screen.
+  await page.route(/\/(settings|articles\?)/, async (route) => {
+    if (route.request().method() === "GET") await new Promise((resolveDelay) => setTimeout(resolveDelay, 700));
+    await route.continue();
+  });
+
+  await page.goto("/");
+  await expect(page.getByRole("tab", { name: "Não lidas" })).toBeVisible();
+  await expect(page.locator(".news-item").first()).toBeVisible();
+  await expect(page.locator(".unread-pill")).toHaveText("5");
+
+  const startupViolations = await page.evaluate(() => (window as unknown as { startupViolations: string[] }).startupViolations);
+  expect([...new Set(startupViolations)]).toEqual([]);
+  await englishSystemContext.close();
 });

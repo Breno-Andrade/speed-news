@@ -173,6 +173,7 @@ pub fn report_system_locale(application_handle: AppHandle, system_locale: String
 }
 
 /// Hidden while the GNOME panel button is active, so the app does not appear twice.
+#[cfg(target_os = "linux")]
 pub fn set_tray_visible(application_handle: &AppHandle, is_visible: bool) {
     if let Some(tray_icon) = application_handle.tray_by_id(TRAY_ID) {
         let _ = tray_icon.set_visible(is_visible);

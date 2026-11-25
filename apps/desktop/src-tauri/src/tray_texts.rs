@@ -40,6 +40,8 @@ pub fn tray_texts(unread_count: u32, interface_language: &str, system_locale: &s
 }
 
 /// Locale from the POSIX environment ("pt_BR.UTF-8" → "pt-BR"). `C`/`POSIX` mean "not set".
+/// Windows asks the system instead (tests still cover it there).
+#[cfg(any(not(target_os = "windows"), test))]
 pub fn locale_from_environment(read_variable: impl Fn(&str) -> Option<String>) -> Option<String> {
     ["LC_ALL", "LC_MESSAGES", "LANG"]
         .into_iter()

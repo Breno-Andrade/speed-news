@@ -8,12 +8,14 @@ import { RaceWeekendCard } from "./features/race-weekend/RaceWeekendCard";
 import { SettingsPanel } from "./features/settings/SettingsPanel";
 import { UpdateNotices } from "./features/updates/UpdateNotices";
 import { GnomeExtensionNotice } from "./features/gnome/GnomeExtensionNotice";
+import { useSettings } from "./features/settings/SettingsProvider";
 import { useApiClient } from "./shared/api/ApiProvider";
 import type { ArticleStatusFilter } from "./shared/api/apiClient";
 import type { Article } from "./shared/api/types";
 import { useLocale } from "./shared/i18n/LocaleProvider";
 import { hideMainWindow, isRunningInTauri, onPopoverShown, quitApp } from "./shared/platform/tauriBridge";
 import { AnimatedHeight } from "./shared/ui/AnimatedHeight";
+import { StartupSkeleton } from "./StartupSkeleton";
 import { BackIcon, CheckAllIcon, PowerIcon, RefreshIcon, SettingsIcon } from "./shared/ui/icons";
 
 type ArticleView = {
@@ -41,6 +43,10 @@ export function App() {
   const [hasNavigated, setHasNavigated] = useState(false);
   const navigationFade = hasNavigated ? "fade-in" : "";
   const isPopoverEntering = usePopoverEntrance();
+  const { areSettingsLoaded } = useSettings();
+  // The count arrives over the event stream within milliseconds, long before the list: showing
+  // it (and "mark all as read") alone made it pop in ahead of everything else.
+  const indicatedUnreadCount = articlesState.status === "loading" ? 0 : unreadCount;
 
   // Esc hides the popover, whatever the "close when clicking outside" setting is.
   useEffect(() => {
@@ -89,6 +95,10 @@ export function App() {
     if (animationEvent.target === animationEvent.currentTarget) setIsHomeReturning(false);
   }
 
+  // Until the saved language is known, keep the startup skeleton (the data loads meanwhile):
+  // the first words on screen are already in the right language.
+  if (!areSettingsLoaded) return <StartupSkeleton label={messages.loadingPanel} />;
+
   const isHome = currentView.viewName === "home";
   const articleNeighbors = currentView.viewName === "article" ? findNeighbors(currentView) : {};
 
@@ -99,10 +109,10 @@ export function App() {
           {isHome ? (
             <h1 className="app-header__title">
               {messages.appTitle}
-              {unreadCount > 0 && (
+              {indicatedUnreadCount > 0 && (
                 // key restarts the pop animation whenever the number changes
-                <span key={unreadCount} className="unread-pill unread-pill--pop">
-                  {unreadCount > 99 ? "99+" : unreadCount}
+                <span key={indicatedUnreadCount} className="unread-pill unread-pill--pop">
+                  {indicatedUnreadCount > 99 ? "99+" : indicatedUnreadCount}
                 </span>
               )}
             </h1>
@@ -159,10 +169,10 @@ export function App() {
             </div>
             <button
               type="button"
-              className={`icon-button icon-button--labeled mark-all-button ${unreadCount > 0 ? "" : "mark-all-button--hidden"}`}
+              className={`icon-button icon-button--labeled mark-all-button ${indicatedUnreadCount > 0 ? "" : "mark-all-button--hidden"}`}
               onClick={() => apiClient.markAllArticlesRead()}
-              disabled={unreadCount === 0}
-              aria-hidden={unreadCount === 0}
+              disabled={indicatedUnreadCount === 0}
+              aria-hidden={indicatedUnreadCount === 0}
             >
               <CheckAllIcon size={14} /> {messages.markAllRead}
             </button>

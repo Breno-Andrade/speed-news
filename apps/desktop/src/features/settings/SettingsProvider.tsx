@@ -19,6 +19,9 @@ type SettingsContextValue = {
   systemTimeZone: string;
   systemLocale: string;
   effectiveTimeZone: string;
+  /** False until the saved settings arrived (or failed to): before that the language and time
+   *  zone are only guesses from the system, and showing them would flip once the real ones land. */
+  areSettingsLoaded: boolean;
   updateSettings: (settingsChanges: Partial<UserSettings>) => Promise<void>;
 };
 
@@ -29,12 +32,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [userSettings, setUserSettings] = useState<UserSettings>(defaultUserSettings);
   const [systemTimeZone, setSystemTimeZone] = useState(detectSystemTimeZone);
   const [systemLocale, setSystemLocale] = useState(detectSystemLocale);
+  const [areSettingsLoaded, setAreSettingsLoaded] = useState(false);
 
   useEffect(() => {
     apiClient
       .fetchSettings()
       .then((loadedSettings) => setUserSettings({ ...defaultUserSettings, ...loadedSettings }))
-      .catch(() => undefined);
+      .catch(() => undefined) // defaults: better than holding the skeleton forever
+      .finally(() => setAreSettingsLoaded(true));
   }, [apiClient]);
 
   // "Close when clicking outside" reaches the native shell through the sidecar (tray state),
@@ -76,9 +81,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       systemTimeZone,
       systemLocale,
       effectiveTimeZone: resolveEffectiveTimeZone(userSettings.timeZonePreference, systemTimeZone),
+      areSettingsLoaded,
       updateSettings,
     }),
-    [userSettings, systemTimeZone, systemLocale, updateSettings],
+    [userSettings, systemTimeZone, systemLocale, areSettingsLoaded, updateSettings],
   );
 
   return (

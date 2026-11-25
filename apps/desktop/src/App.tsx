@@ -7,6 +7,7 @@ import { useUnreadCount } from "./features/news/useUnreadCount";
 import { RaceWeekendCard } from "./features/race-weekend/RaceWeekendCard";
 import { SettingsPanel } from "./features/settings/SettingsPanel";
 import { UpdateNotices } from "./features/updates/UpdateNotices";
+import { GnomeExtensionNotice } from "./features/gnome/GnomeExtensionNotice";
 import { useApiClient } from "./shared/api/ApiProvider";
 import type { ArticleStatusFilter } from "./shared/api/apiClient";
 import type { Article } from "./shared/api/types";
@@ -123,6 +124,7 @@ export function App() {
       </header>
 
       <UpdateNotices />
+      <GnomeExtensionNotice />
 
       <main className="app-content">
         {/* Home stays mounted while another view is open: coming back keeps scroll and data. */}

@@ -92,6 +92,25 @@ export async function installPendingUpdate(): Promise<void> {
   }
 }
 
+export type GnomeExtensionStatus = {
+  isGnomeSession: boolean;
+  sessionType: "x11" | "wayland" | "unknown";
+  isInstalled: boolean;
+  /** The panel button is connected to the app right now. */
+  isActive: boolean;
+};
+
+/** null outside the desktop app (browser) — there is nothing to install there. */
+export async function getGnomeExtensionStatus(): Promise<GnomeExtensionStatus | null> {
+  if (!isRunningInTauri()) return null;
+  return invoke<GnomeExtensionStatus>("gnome_extension_status");
+}
+
+/** Copies the bundled GNOME extension and enables it; active after the next GNOME Shell reload. */
+export async function installGnomeExtension(): Promise<GnomeExtensionStatus> {
+  return invoke<GnomeExtensionStatus>("install_gnome_extension");
+}
+
 /** Esc key: hides the popover (the app keeps running in the panel). */
 export async function hideMainWindow(): Promise<void> {
   if (isRunningInTauri()) {

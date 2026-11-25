@@ -7,6 +7,7 @@
 //! While the button is registered, the tray icon is hidden to avoid showing the app twice. If the
 //! extension goes away without unregistering (GNOME Shell restart or crash), the tray comes back.
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use std::thread;
 
@@ -58,6 +59,7 @@ impl PanelBridge {
     /// and bring it back if the caller disappears from the bus without unregistering.
     fn register_panel_button(&self, #[zbus(header)] message_header: Header<'_>) {
         tray::set_tray_visible(&self.application_handle, false);
+        set_panel_button_active(&self.application_handle, true);
 
         let Some(caller_name) = message_header.sender().map(|sender_name| sender_name.to_string()) else {
             return;
@@ -70,6 +72,7 @@ impl PanelBridge {
 
     fn unregister_panel_button(&self) {
         tray::set_tray_visible(&self.application_handle, true);
+        set_panel_button_active(&self.application_handle, false);
     }
 
     #[zbus(property)]
@@ -105,6 +108,7 @@ fn restore_tray_when_caller_leaves(application_handle: AppHandle, caller_name: S
             .unwrap_or(false);
         if caller_is_gone {
             tray::set_tray_visible(&application_handle, true);
+            set_panel_button_active(&application_handle, false);
             return;
         }
     }
@@ -114,6 +118,8 @@ fn restore_tray_when_caller_leaves(application_handle: AppHandle, caller_name: S
 #[derive(Default)]
 pub struct PanelBridgeState {
     connection: Mutex<Option<Connection>>,
+    /// True while the GNOME extension's button is registered (the app then hides its tray icon).
+    is_panel_button_active: AtomicBool,
 }
 
 fn bridge_connection(application_handle: &AppHandle) -> Option<Connection> {
@@ -170,4 +176,19 @@ pub fn publish_tray_state(application_handle: &AppHandle, unread_count: u32, ope
         panel_bridge.quit_label = quit_label.to_string();
         let _ = zbus::block_on(panel_bridge.quit_label_changed(signal_emitter));
     }
+}
+
+fn set_panel_button_active(application_handle: &AppHandle, is_active: bool) {
+    application_handle
+        .state::<PanelBridgeState>()
+        .is_panel_button_active
+        .store(is_active, Ordering::Relaxed);
+}
+
+/// Whether the GNOME panel button is currently connected to this app.
+pub fn is_panel_button_active(application_handle: &AppHandle) -> bool {
+    application_handle
+        .state::<PanelBridgeState>()
+        .is_panel_button_active
+        .load(Ordering::Relaxed)
 }

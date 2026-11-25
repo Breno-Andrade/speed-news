@@ -8,6 +8,7 @@ import { listSupportedTimeZones } from "../../shared/time/timeZone";
 import { buildTimeZoneOptions, describeTimeZoneOption, filterTimeZoneOptions, groupByCountry } from "../../shared/time/timeZoneOptions";
 import { BackIcon, ChevronRightIcon } from "../../shared/ui/icons";
 import { SkeletonBlock, SkeletonGroup, useDelayedFlag } from "../../shared/ui/Skeleton";
+import { GnomeExtensionRow } from "../gnome/GnomeExtensionRow";
 import { useSettings } from "./SettingsProvider";
 
 const REPOSITORY_URL = "https://github.com/Breno-Andrade/speed-news";
@@ -132,6 +133,7 @@ function GeneralGroup({ onSave }: { onSave: SaveSettings }) {
         isOn={userSettings.closeOnFocusLoss}
         onToggle={(isOn) => onSave({ closeOnFocusLoss: isOn })}
       />
+      <GnomeExtensionRow />
     </SettingsGroup>
   );
 }

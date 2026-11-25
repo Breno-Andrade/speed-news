@@ -1,6 +1,7 @@
 //! Native shell of Speed News: tray icon, popover window and the Go sidecar lifecycle.
 //! All business logic lives in apps/api (Go) and in the React UI.
 
+mod gnome_extension;
 #[cfg(target_os = "linux")]
 mod panel_bridge;
 mod sidecar;
@@ -34,6 +35,8 @@ pub fn run() {
             tray::set_close_on_focus_loss,
             tray::hide_main_window,
             updates::install_pending_update,
+            gnome_extension::gnome_extension_status,
+            gnome_extension::install_gnome_extension,
             quit_app
         ])
         .setup(|application| {
@@ -47,6 +50,8 @@ pub fn run() {
             panel_bridge::start(application.handle());
             sidecar::start_sidecar(application.handle())?;
             updates::start_background_updates(application.handle());
+            // An app update may bring a newer panel button: refresh the installed copy.
+            gnome_extension::upgrade_installed_extension(application.handle());
             Ok(())
         })
         .on_window_event(|window, window_event| match window_event {

@@ -98,6 +98,16 @@ export type Messages = {
   circuitSourceDetail: string;
   weatherSourceDetail: string;
   trademarkNotice: string;
+  gnomeExtensionOffer: string;
+  gnomeExtensionInstall: string;
+  gnomeExtensionInstallFailed: string;
+  gnomeExtensionAlmostThere: string;
+  gnomeExtensionRowLabel: string;
+  gnomeExtensionActive: string;
+  gnomeExtensionRowHint: string;
+  reloadGnomeOnX11: string;
+  reloadGnomeOnWayland: string;
+  reloadGnomeUnknown: string;
 };
 
 export type WeatherCondition = "clear" | "mainlyClear" | "partlyCloudy" | "cloudy" | "fog" | "drizzle" | "rain" | "snow" | "showers" | "thunderstorm";
@@ -219,6 +229,16 @@ const portugueseMessages: Messages = {
   circuitSourceDetail: "traçados dos circuitos · MIT",
   weatherSourceDetail: "previsão do tempo · CC BY 4.0",
   trademarkNotice: "Projeto independente, sem vínculo com a Fórmula 1, a FIA ou equipes. \"Formula 1\" e \"F1\" são marcas da Formula One Licensing B.V.",
+  gnomeExtensionOffer: "Instale o botão na barra do GNOME para abrir as notícias com um clique.",
+  gnomeExtensionInstall: "Instalar",
+  gnomeExtensionInstallFailed: "Não foi possível instalar. Tente de novo ou veja o README.",
+  gnomeExtensionAlmostThere: "Quase lá: recarregue o GNOME para ativar o botão na barra.",
+  gnomeExtensionRowLabel: "Botão na barra do GNOME",
+  gnomeExtensionActive: "Ativo",
+  gnomeExtensionRowHint: "Abre as notícias com um clique e mostra o contador ao lado do ícone.",
+  reloadGnomeOnX11: "Pressione Alt+F2, digite r e Enter (as janelas continuam abertas).",
+  reloadGnomeOnWayland: "Saia da sessão e entre de novo.",
+  reloadGnomeUnknown: "No X11: Alt+F2, digite r e Enter. No Wayland: saia da sessão e entre de novo.",
 };
 
 const englishMessages: Messages = {
@@ -338,6 +358,16 @@ const englishMessages: Messages = {
   circuitSourceDetail: "circuit drawings · MIT",
   weatherSourceDetail: "weather forecast · CC BY 4.0",
   trademarkNotice: "Independent project, not affiliated with Formula 1, the FIA or any team. \"Formula 1\" and \"F1\" are trademarks of Formula One Licensing B.V.",
+  gnomeExtensionOffer: "Install the GNOME panel button to open the news with one click.",
+  gnomeExtensionInstall: "Install",
+  gnomeExtensionInstallFailed: "Couldn't install. Try again or see the README.",
+  gnomeExtensionAlmostThere: "Almost there: reload GNOME to activate the panel button.",
+  gnomeExtensionRowLabel: "GNOME panel button",
+  gnomeExtensionActive: "Active",
+  gnomeExtensionRowHint: "Opens the news with one click and shows the count next to the icon.",
+  reloadGnomeOnX11: "Press Alt+F2, type r and Enter (your windows stay open).",
+  reloadGnomeOnWayland: "Log out and back in.",
+  reloadGnomeUnknown: "On X11: Alt+F2, type r and Enter. On Wayland: log out and back in.",
 };
 
 // Jolpica returns English names; Portuguese names follow how Brazilian media calls each Grand Prix.

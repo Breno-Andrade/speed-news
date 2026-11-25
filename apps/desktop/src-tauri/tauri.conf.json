@@ -45,6 +45,9 @@
       "nsis": {
         "installMode": "currentUser"
       }
+    },
+    "resources": {
+      "../gnome-shell-extension/": "gnome-shell-extension/"
     }
   },
   "plugins": {

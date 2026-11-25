@@ -1,6 +1,7 @@
 //! Native shell of Speed News: tray icon, popover window and the Go sidecar lifecycle.
 //! All business logic lives in apps/api (Go) and in the React UI.
 
+mod autostart;
 mod gnome_extension;
 #[cfg(target_os = "linux")]
 mod panel_bridge;
@@ -18,6 +19,14 @@ fn quit_app(application_handle: AppHandle) {
 
 pub fn run() {
     let application_builder = tauri::Builder::default()
+        // Must be the first plugin. Opening the app again (menu, autostart + manual launch) shows the
+        // running instance's popover instead of starting a second app and sidecar on the same database.
+        .plugin(tauri_plugin_single_instance::init(
+            |application_handle, _arguments, _working_directory| {
+                tray::show_main_window(application_handle, None);
+            },
+        ))
+        .plugin(tauri_plugin_autostart::Builder::new().build())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_positioner::init())
@@ -52,6 +61,7 @@ pub fn run() {
             updates::start_background_updates(application.handle());
             // An app update may bring a newer panel button: refresh the installed copy.
             gnome_extension::upgrade_installed_extension(application.handle());
+            autostart::enable_on_first_run(application.handle());
             Ok(())
         })
         .on_window_event(|window, window_event| match window_event {

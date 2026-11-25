@@ -66,6 +66,8 @@ export type Messages = {
   windowBehaviorTitle: string;
   closeOnFocusLoss: string;
   closeOnFocusLossHint: string;
+  launchAtLogin: string;
+  launchAtLoginHint: string;
   readFullArticle: string;
   summaryAttribution: (sourceName: string) => string;
   publishedAtLabel: (dateText: string) => string;
@@ -200,6 +202,8 @@ const portugueseMessages: Messages = {
   windowBehaviorTitle: "Janela",
   closeOnFocusLoss: "Fechar ao clicar fora",
   closeOnFocusLossHint: "Desligado, a janela fecha só pelo ícone na barra ou pela tecla Esc.",
+  launchAtLogin: "Iniciar com o computador",
+  launchAtLoginHint: "Fica na barra desde o login, sem abrir janela. Desligado, as notícias só chegam com o app aberto.",
   readFullArticle: "Ler matéria completa",
   summaryAttribution: (sourceName) => `Resumo publicado por ${sourceName}`,
   publishedAtLabel: (dateText) => `Publicado em ${dateText}`,
@@ -332,6 +336,8 @@ const englishMessages: Messages = {
   windowBehaviorTitle: "Window",
   closeOnFocusLoss: "Close when clicking outside",
   closeOnFocusLossHint: "When off, the window only closes from the panel icon or the Esc key.",
+  launchAtLogin: "Start with the computer",
+  launchAtLoginHint: "Sits in the panel from login, without opening a window. When off, news only arrives while the app is open.",
   readFullArticle: "Read full article",
   summaryAttribution: (sourceName) => `Summary published by ${sourceName}`,
   publishedAtLabel: (dateText) => `Published on ${dateText}`,

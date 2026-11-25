@@ -2,6 +2,7 @@
 import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { disable as disableAutostart, enable as enableAutostart, isEnabled as isAutostartEnabled } from "@tauri-apps/plugin-autostart";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import type { ApiConnection } from "../api/types";
 
@@ -109,6 +110,17 @@ export async function getGnomeExtensionStatus(): Promise<GnomeExtensionStatus | 
 /** Copies the bundled GNOME extension and enables it; active after the next GNOME Shell reload. */
 export async function installGnomeExtension(): Promise<GnomeExtensionStatus> {
   return invoke<GnomeExtensionStatus>("install_gnome_extension");
+}
+
+/** Start at login (the OS keeps this, not the backend). null in the browser. */
+export async function isLaunchAtLoginEnabled(): Promise<boolean | null> {
+  if (!isRunningInTauri()) return null;
+  return isAutostartEnabled();
+}
+
+export async function setLaunchAtLogin(isEnabled: boolean): Promise<void> {
+  if (!isRunningInTauri()) return;
+  await (isEnabled ? enableAutostart() : disableAutostart());
 }
 
 /** Esc key: hides the popover (the app keeps running in the panel). */

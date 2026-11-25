@@ -91,6 +91,8 @@ Updates are signed: the app only installs bundles signed with the project's upda
 
 ## License and trademarks
 
-Speed News is free software under the [GNU GPL v3.0 or later](LICENSE).
+Copyright © 2026 Breno Andrade.
+
+Speed News is free software under the [GNU GPL v3.0 or later](LICENSE): you may use, study, share and modify it, and any distributed version (modified or not) must stay under the GPL, keep this copyright notice and make its source code available.
 
 Speed News is an independent project, not affiliated with, endorsed by or connected to Formula 1, the FIA or any team. "Formula 1", "F1" and related marks are trademarks of Formula One Licensing B.V. News belong to their publishers; the app shows only the headline, summary and image each feed publishes and links to the original article.

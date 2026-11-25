@@ -42,14 +42,24 @@ func (broadcaster *Broadcaster) Subscribe() (<-chan UnreadCountChanged, func()) 
 }
 
 // Publish sends the new count; slow listeners skip intermediate values instead of blocking.
+// The newest value always gets through: when a listener's buffer is full, its oldest pending
+// value is dropped to make room (dropping the newest one left the tray showing a stale count).
 func (broadcaster *Broadcaster) Publish(unreadCountChanged UnreadCountChanged) {
 	broadcaster.mutex.Lock()
 	defer broadcaster.mutex.Unlock()
 	broadcaster.latestUnreadCount = &unreadCountChanged
 	for listenerChannel := range broadcaster.listenerChannels {
-		select {
-		case listenerChannel <- unreadCountChanged:
-		default:
+		for {
+			select {
+			case listenerChannel <- unreadCountChanged:
+			default:
+				select {
+				case <-listenerChannel:
+				default:
+				}
+				continue
+			}
+			break
 		}
 	}
 }

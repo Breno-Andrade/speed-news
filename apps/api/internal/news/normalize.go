@@ -1,5 +1,5 @@
-// Package pipeline turns raw feed items into clean domain articles.
-package pipeline
+// Normalization: turns raw feed items into clean domain articles.
+package news
 
 import (
 	"crypto/sha256"

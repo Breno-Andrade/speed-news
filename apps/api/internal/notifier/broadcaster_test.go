@@ -60,6 +60,30 @@ func TestSlowListenerNeverBlocksPublishers(test *testing.T) {
 	}
 }
 
+func TestSlowListenerAlwaysEndsWithTheNewestCount(test *testing.T) {
+	broadcaster := NewBroadcaster()
+	listenerChannel, unsubscribe := broadcaster.Subscribe()
+	defer unsubscribe()
+
+	// Far more values than the buffer holds, without reading any of them.
+	for publishIndex := 0; publishIndex <= 100; publishIndex++ {
+		broadcaster.Publish(UnreadCountChanged{UnreadCount: publishIndex})
+	}
+	lastReceived := UnreadCountChanged{UnreadCount: -1}
+	for {
+		select {
+		case receivedValue := <-listenerChannel:
+			lastReceived = receivedValue
+			continue
+		default:
+		}
+		break
+	}
+	if lastReceived.UnreadCount != 100 {
+		test.Fatalf("the newest count must survive a full buffer, last received %d", lastReceived.UnreadCount)
+	}
+}
+
 func TestUnsubscribeClosesTheChannelAndIsIdempotent(test *testing.T) {
 	broadcaster := NewBroadcaster()
 	listenerChannel, unsubscribe := broadcaster.Subscribe()

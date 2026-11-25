@@ -3,7 +3,8 @@
 // Startup contract with the desktop shell:
 //   - the API token comes from the SPEED_NEWS_API_TOKEN environment variable;
 //   - once listening, it prints "SPEED_NEWS_API_READY port=<port>" on stdout;
-//   - with --exit-on-stdin-close it shuts down when the parent process goes away.
+//   - with --exit-on-stdin-close it shuts down when the parent process goes away;
+//   - with --report-tray-state it prints "SPEED_NEWS_TRAY {json}" lines for the tray (see shellbridge).
 package main
 
 import (
@@ -16,6 +17,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"syscall"
 
@@ -30,6 +32,7 @@ type commandOptions struct {
 	dataDirectory    string
 	allowedOrigins   string
 	exitOnStdinClose bool
+	reportTrayState  bool
 	verboseLogging   bool
 	sourcesFile      string
 	jolpicaBaseURL   string
@@ -46,6 +49,7 @@ func main() {
 
 func run() error {
 	options := parseCommandOptions()
+	configureRuntimeForBackgroundProcess()
 
 	logLevel := slog.LevelInfo
 	if options.verboseLogging {
@@ -69,6 +73,7 @@ func run() error {
 		CircuitsBaseURL:  options.circuitsBaseURL,
 		OpenMeteoBaseURL: options.openMeteoBaseURL,
 		Logger:           logger,
+		TrayStateOutput:  trayStateOutput(options.reportTrayState),
 	})
 	if err != nil {
 		return err
@@ -92,6 +97,7 @@ func parseCommandOptions() commandOptions {
 	flag.StringVar(&options.dataDirectory, "data-dir", defaultDataDirectory(), "directory for the SQLite database")
 	flag.StringVar(&options.allowedOrigins, "allowed-origins", "", "comma-separated CORS origins")
 	flag.BoolVar(&options.exitOnStdinClose, "exit-on-stdin-close", false, "exit when stdin closes (sidecar mode)")
+	flag.BoolVar(&options.reportTrayState, "report-tray-state", false, "print tray state lines on stdout (sidecar mode)")
 	flag.BoolVar(&options.verboseLogging, "verbose", false, "debug logging")
 	// Test/E2E only: point every external source at a fixture server.
 	flag.StringVar(&options.sourcesFile, "sources-file", "", "news sources YAML (default: embedded list)")
@@ -100,6 +106,31 @@ func parseCommandOptions() commandOptions {
 	flag.StringVar(&options.openMeteoBaseURL, "openmeteo-base-url", "", "Open-Meteo forecast URL (default: real API)")
 	flag.Parse()
 	return options
+}
+
+func trayStateOutput(isEnabled bool) io.Writer {
+	if !isEnabled {
+		return nil
+	}
+	return os.Stdout
+}
+
+// Runtime limits for a process that lives in the tray for months and works in short bursts.
+const (
+	backgroundMemoryLimitBytes = 48 << 20
+	backgroundGCPercent        = 50
+)
+
+// configureRuntimeForBackgroundProcess makes the GC collect earlier than the defaults, which are
+// tuned for throughput. GOMEMLIMIT / GOGC set in the environment still win (profiling, tests).
+// The limit is soft: past it the GC works harder, the process is never killed.
+func configureRuntimeForBackgroundProcess() {
+	if os.Getenv("GOMEMLIMIT") == "" {
+		debug.SetMemoryLimit(backgroundMemoryLimitBytes)
+	}
+	if os.Getenv("GOGC") == "" {
+		debug.SetGCPercent(backgroundGCPercent)
+	}
 }
 
 func defaultDataDirectory() string {

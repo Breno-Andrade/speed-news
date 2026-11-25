@@ -1,7 +1,7 @@
-// Package shareimage finds the picture a site publishes for link previews (og:image /
+// Package ogimage finds the picture a site publishes for link previews (og:image /
 // twitter:image) on an article page. Used only for sources whose feed carries no image
 // (imageFromArticlePage in the sources YAML). It reads the page <head>, never the article text.
-package shareimage
+package ogimage
 
 import (
 	"context"

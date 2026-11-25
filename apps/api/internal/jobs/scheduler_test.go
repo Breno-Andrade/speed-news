@@ -1,4 +1,4 @@
-package scheduler
+package jobs
 
 import (
 	"context"
@@ -39,4 +39,28 @@ func TestNewsRefreshDoesNotWaitForAHangingCalendar(test *testing.T) {
 	case <-time.After(2 * time.Second):
 		test.Fatal("news were not refreshed while the calendar sync was hanging")
 	}
+}
+
+func TestAfterNewsRefreshRunsAfterScheduledAndManualRefreshes(test *testing.T) {
+	ctx, cancelRun := context.WithCancel(context.Background())
+	defer cancelRun()
+
+	newsRefresher := &countingNewsRefresher{refreshedSignal: make(chan struct{}, 1)}
+	afterRefreshSignal := make(chan struct{}, 4)
+	silentLogger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	jobScheduler := NewScheduler(newsRefresher, hangingCalendar{}, nil, silentLogger).
+		WithAfterNewsRefresh(func(context.Context) { afterRefreshSignal <- struct{}{} })
+	go jobScheduler.Run(ctx)
+
+	waitForSignal := func(description string) {
+		test.Helper()
+		select {
+		case <-afterRefreshSignal:
+		case <-time.After(2 * time.Second):
+			test.Fatalf("after-refresh work did not run after the %s refresh", description)
+		}
+	}
+	waitForSignal("startup")
+	jobScheduler.RequestRefreshNow()
+	waitForSignal("manual")
 }

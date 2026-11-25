@@ -1,6 +1,6 @@
-// Package circuits fetches track drawings from github.com/bacinger/f1-circuits (MIT license)
+// Package f1circuits fetches track drawings from github.com/bacinger/f1-circuits (MIT license)
 // and converts them to SVG paths.
-package circuits
+package f1circuits
 
 import (
 	"context"

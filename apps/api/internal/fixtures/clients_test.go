@@ -11,11 +11,11 @@ import (
 	"testing"
 	"time"
 
-	"speed-news/apps/api/internal/calendar/jolpica"
-	"speed-news/apps/api/internal/circuits"
 	"speed-news/apps/api/internal/domain"
 	"speed-news/apps/api/internal/fixtures"
-	"speed-news/apps/api/internal/forecast/openmeteo"
+	"speed-news/apps/api/internal/providers/f1circuits"
+	"speed-news/apps/api/internal/providers/jolpica"
+	"speed-news/apps/api/internal/providers/openmeteo"
 )
 
 const clientUserAgent = "SpeedNews/test"
@@ -78,7 +78,7 @@ func TestJolpicaClient(test *testing.T) {
 
 func TestCircuitsClient(test *testing.T) {
 	fixtureServer, _ := startFixtureServer(test)
-	circuitsClient := circuits.NewClient(fixtureServer.Client(), fixtureServer.URL+"/circuits", clientUserAgent)
+	circuitsClient := f1circuits.NewClient(fixtureServer.Client(), fixtureServer.URL+"/circuits", clientUserAgent)
 	singaporeEvent := domain.RaceEvent{CircuitID: "marina_bay", Coordinates: domain.GeoCoordinates{Latitude: 1.2914, Longitude: 103.864}}
 
 	circuitLayout, err := circuitsClient.FetchLayoutForCircuit(context.Background(), singaporeEvent)
@@ -94,7 +94,7 @@ func TestCircuitsClient(test *testing.T) {
 	if _, err := circuitsClient.FetchLayoutForCircuit(context.Background(), farAwayEvent); err == nil {
 		test.Error("a circuit far from every drawing must not get the wrong track")
 	}
-	unavailableClient := circuits.NewClient(http.DefaultClient, startUnavailableServer(test).URL, clientUserAgent)
+	unavailableClient := f1circuits.NewClient(http.DefaultClient, startUnavailableServer(test).URL, clientUserAgent)
 	if _, err := unavailableClient.FetchCircuitFacts(context.Background(), singaporeEvent); err == nil {
 		test.Error("a 503 must be an error")
 	}

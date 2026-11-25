@@ -274,7 +274,6 @@ button {
 .segmented-control__option,
 .race-card__tab,
 .news-item,
-.time-zone-picker__item,
 .link-button {
   transition:
     background-color var(--motion-fast) ease,
@@ -1151,103 +1150,361 @@ button {
   position: relative;
 }
 
-.settings-section + .settings-section {
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px solid var(--color-border);
+.settings-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.settings-section__title {
-  margin: 0 0 4px;
-  font-size: 13px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: var(--color-text-muted);
-}
-
-.settings-section__hint {
-  margin: 2px 0 0;
-  color: var(--color-text-muted);
-  font-size: 11px;
+.settings-panel__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
 }
 
 .settings-panel__saved {
   position: absolute;
-  top: 0;
+  top: 2px;
   right: 0;
+  z-index: 1;
   margin: 0;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--color-surface);
   color: var(--color-live);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11.5px;
+  font-weight: 700;
 }
 
 .settings-panel__saved--failed {
   color: var(--color-accent);
 }
 
-.settings-panel__option input:disabled + span {
-  opacity: 0.75;
+.settings-group__title {
+  margin: 0 0 6px 4px;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
 }
 
-.settings-panel__option {
+.settings-group__footer {
+  margin: 6px 4px 0;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+/* A card of rows separated by hairlines, like system settings. */
+.settings-card {
+  overflow: hidden;
+  border-radius: var(--radius-large);
+  background: var(--color-surface);
+}
+
+.settings-row {
   display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 8px 0;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
   cursor: pointer;
 }
 
-.settings-panel__option small {
-  display: block;
+.settings-row + .settings-row,
+.settings-row + .settings-disclosure,
+.settings-disclosure + .settings-row {
+  border-top: 1px solid var(--color-border);
+}
+
+.settings-row--stacked {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  cursor: default;
+}
+
+.settings-row--link:hover {
+  background: var(--color-surface-strong);
+}
+
+.settings-row--disabled {
+  cursor: default;
+}
+
+.settings-row__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.settings-row__label {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.settings-row__description {
+  color: var(--color-text-muted);
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+
+.settings-row__value {
+  margin-left: auto;
+  color: var(--color-text-muted);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.settings-row > svg {
+  flex-shrink: 0;
   color: var(--color-text-muted);
 }
 
+/* Toggle switch on a real checkbox (keyboard and screen readers work as usual). */
+.toggle-switch {
+  appearance: none;
+  position: relative;
+  flex-shrink: 0;
+  width: 36px;
+  height: 22px;
+  margin: 0;
+  border-radius: 999px;
+  background: var(--color-surface-strong);
+  box-shadow: inset 0 0 0 1px var(--color-border);
+  cursor: pointer;
+  transition: background-color var(--motion-fast) ease;
+}
+
+.toggle-switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
+  transition: transform var(--motion-fast) var(--ease-out);
+}
+
+.toggle-switch:checked {
+  background: var(--color-accent);
+  box-shadow: none;
+}
+
+.toggle-switch:checked::after {
+  transform: translateX(14px);
+}
+
+.toggle-switch:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.toggle-switch:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Segmented radio group (interface language). */
+.segmented-choice {
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  padding: 2px;
+  border-radius: var(--radius-small);
+  background: var(--color-surface-strong);
+}
+
+.segmented-choice__option {
+  position: relative;
+  cursor: pointer;
+}
+
+.segmented-choice__option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.segmented-choice__option span {
+  display: block;
+  padding: 6px 4px;
+  border-radius: 4px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  transition:
+    background-color var(--motion-fast) ease,
+    color var(--motion-fast) ease;
+}
+
+.segmented-choice__option input:checked + span {
+  background: var(--color-background);
+  color: var(--color-text);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.12);
+}
+
+.segmented-choice__option input:focus-visible + span {
+  outline: 2px solid var(--color-accent);
+}
+
+/* About → data sources */
+.settings-disclosure summary {
+  list-style: none;
+}
+
+.settings-disclosure summary::-webkit-details-marker {
+  display: none;
+}
+
+.settings-disclosure summary .settings-row__label {
+  flex: 1;
+}
+
+.settings-disclosure summary svg {
+  transition: transform var(--motion-fast) ease;
+}
+
+.settings-disclosure[open] summary svg {
+  transform: rotate(90deg);
+}
+
+.data-source-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 12px 10px;
+}
+
+.data-source-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 12px;
+}
+
+.data-source-list small {
+  color: var(--color-text-muted);
+  text-align: right;
+}
+
+/* ---------- time zone picker ---------- */
+
 .time-zone-picker {
-  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.time-zone-picker__header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.time-zone-picker__header .icon-button {
+  margin-left: -8px;
 }
 
 .time-zone-picker__search {
   width: 100%;
-  padding: 8px 10px;
+  padding: 9px 12px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-small);
   background: var(--color-surface);
   color: var(--color-text);
   font: inherit;
+  font-size: 13px;
 }
 
-.time-zone-picker__list {
-  list-style: none;
-  margin: 6px 0 0;
-  padding: 0;
-  max-height: 300px;
-  overflow-y: auto;
+.time-zone-picker__search:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -1px;
 }
 
-.time-zone-picker__item {
+.time-zone-picker__offset-heading {
+  position: sticky;
+  top: -12px;
+  z-index: 1;
+  margin: 8px 0 2px;
+  padding: 4px 4px;
+  background: var(--color-background);
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+
+.time-zone-option {
   display: flex;
-  justify-content: space-between;
-  gap: 8px;
+  align-items: center;
+  gap: 10px;
   width: 100%;
   padding: 7px 8px;
   border: none;
   border-radius: var(--radius-small);
   background: transparent;
+  color: var(--color-text);
   text-align: left;
-  font-size: 13px;
+  transition: background-color var(--motion-fast) ease;
 }
 
-.time-zone-picker__item small {
-  color: var(--color-text-muted);
-  text-align: right;
-}
-
-.time-zone-picker__item:hover {
+.time-zone-option:hover {
   background: var(--color-surface);
 }
 
-.time-zone-picker__item[aria-selected="true"] {
+.time-zone-option[aria-pressed="true"] {
   background: var(--color-surface-strong);
+}
+
+.time-zone-option--automatic {
+  padding: 10px 12px;
+  border-radius: var(--radius-large);
+  background: var(--color-surface);
+}
+
+.time-zone-option__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.time-zone-option__city {
+  font-size: 13px;
   font-weight: 600;
+}
+
+.time-zone-option__detail {
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.time-zone-option__offset {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.time-zone-option__check {
+  color: var(--color-accent);
+  font-weight: 800;
 }

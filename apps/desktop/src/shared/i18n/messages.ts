@@ -78,6 +78,26 @@ export type Messages = {
   installUpdate: string;
   installUpdatePasswordHint: string;
   dismiss: string;
+  generalTitle: string;
+  newsTitle: string;
+  scheduleTitle: string;
+  aboutTitle: string;
+  automaticShort: string;
+  sourceCount: (sourceCount: number) => string;
+  timeZoneFollowsComputer: string;
+  timeZoneChosenByYou: string;
+  useComputerTimeZone: string;
+  noTimeZoneFound: string;
+  versionLabel: string;
+  developmentBuild: string;
+  sourceCodeLabel: string;
+  licenseDescription: string;
+  dataSourcesTitle: string;
+  newsSourceDetail: string;
+  calendarSourceDetail: string;
+  circuitSourceDetail: string;
+  weatherSourceDetail: string;
+  trademarkNotice: string;
 };
 
 export type WeatherCondition = "clear" | "mainlyClear" | "partlyCloudy" | "cloudy" | "fog" | "drizzle" | "rain" | "snow" | "showers" | "thunderstorm";
@@ -118,7 +138,7 @@ const portugueseMessages: Messages = {
   timeZoneTitle: "Fuso horário",
   timeZoneAutomatic: (detectedTimeZone) => `Automático (do computador: ${detectedTimeZone})`,
   timeZoneManual: "Escolher manualmente",
-  timeZoneSearchPlaceholder: "Buscar cidade ou região…",
+  timeZoneSearchPlaceholder: "Cidade, região, horário ou GMT…",
   saved: "Salvo",
   attribution: "Fontes",
   interfaceLanguageTitle: "Idioma do app",
@@ -179,6 +199,26 @@ const portugueseMessages: Messages = {
   installUpdate: "Atualizar agora",
   installUpdatePasswordHint: "O sistema vai pedir sua senha de administrador.",
   dismiss: "Fechar aviso",
+  generalTitle: "Geral",
+  newsTitle: "Notícias",
+  scheduleTitle: "Horários",
+  aboutTitle: "Sobre",
+  automaticShort: "Automático",
+  sourceCount: (sourceCount) => `${sourceCount} ${sourceCount === 1 ? "fonte" : "fontes"}`,
+  timeZoneFollowsComputer: "Automático, igual ao computador",
+  timeZoneChosenByYou: "Escolhido por você",
+  useComputerTimeZone: "Usar o fuso do computador",
+  noTimeZoneFound: "Nenhum fuso encontrado.",
+  versionLabel: "Versão",
+  developmentBuild: "desenvolvimento",
+  sourceCodeLabel: "Código-fonte",
+  licenseDescription: "Software livre · licença GPL-3.0",
+  dataSourcesTitle: "Fontes de dados",
+  newsSourceDetail: "notícias (título, resumo e link)",
+  calendarSourceDetail: "calendário e resultados",
+  circuitSourceDetail: "traçados dos circuitos · MIT",
+  weatherSourceDetail: "previsão do tempo · CC BY 4.0",
+  trademarkNotice: "Projeto independente, sem vínculo com a Fórmula 1, a FIA ou equipes. \"Formula 1\" e \"F1\" são marcas da Formula One Licensing B.V.",
 };
 
 const englishMessages: Messages = {
@@ -217,7 +257,7 @@ const englishMessages: Messages = {
   timeZoneTitle: "Time zone",
   timeZoneAutomatic: (detectedTimeZone) => `Automatic (computer: ${detectedTimeZone})`,
   timeZoneManual: "Choose manually",
-  timeZoneSearchPlaceholder: "Search city or region…",
+  timeZoneSearchPlaceholder: "City, region, zone name or GMT…",
   saved: "Saved",
   attribution: "Sources",
   interfaceLanguageTitle: "App language",
@@ -278,6 +318,26 @@ const englishMessages: Messages = {
   installUpdate: "Update now",
   installUpdatePasswordHint: "Your system will ask for the administrator password.",
   dismiss: "Dismiss",
+  generalTitle: "General",
+  newsTitle: "News",
+  scheduleTitle: "Times",
+  aboutTitle: "About",
+  automaticShort: "Automatic",
+  sourceCount: (sourceCount) => `${sourceCount} ${sourceCount === 1 ? "source" : "sources"}`,
+  timeZoneFollowsComputer: "Automatic, same as the computer",
+  timeZoneChosenByYou: "Chosen by you",
+  useComputerTimeZone: "Use the computer's time zone",
+  noTimeZoneFound: "No time zone found.",
+  versionLabel: "Version",
+  developmentBuild: "development",
+  sourceCodeLabel: "Source code",
+  licenseDescription: "Free software · GPL-3.0 license",
+  dataSourcesTitle: "Data sources",
+  newsSourceDetail: "news (headline, summary and link)",
+  calendarSourceDetail: "calendar and results",
+  circuitSourceDetail: "circuit drawings · MIT",
+  weatherSourceDetail: "weather forecast · CC BY 4.0",
+  trademarkNotice: "Independent project, not affiliated with Formula 1, the FIA or any team. \"Formula 1\" and \"F1\" are trademarks of Formula One Licensing B.V.",
 };
 
 // Jolpica returns English names; Portuguese names follow how Brazilian media calls each Grand Prix.

@@ -1,26 +1,24 @@
-import { useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useApiClient } from "../../shared/api/ApiProvider";
-import type { InterfaceLanguage, UserSettings } from "../../shared/api/types";
+import type { InterfaceLanguage, NewsSource, UserSettings } from "../../shared/api/types";
 import { useLocale } from "../../shared/i18n/LocaleProvider";
 import { describeLanguage } from "../../shared/i18n/messages";
-import { describeTimeZone, listSupportedTimeZones } from "../../shared/time/timeZone";
+import { getAppVersion, openExternalUrl } from "../../shared/platform/tauriBridge";
+import { listSupportedTimeZones } from "../../shared/time/timeZone";
+import { buildTimeZoneOptions, describeTimeZoneOption, filterTimeZoneOptions, groupByOffset } from "../../shared/time/timeZoneOptions";
+import { BackIcon, ChevronRightIcon } from "../../shared/ui/icons";
 import { SkeletonBlock, SkeletonGroup, useDelayedFlag } from "../../shared/ui/Skeleton";
 import { useSettings } from "./SettingsProvider";
 
-const maximumVisibleTimeZones = 80;
+const REPOSITORY_URL = "https://github.com/Breno-Andrade/speed-news";
 
-function normalizeForSearch(searchText: string): string {
-  return searchText
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/_/g, " ")
-    .toLowerCase();
-}
+type SaveSettings = (settingsChanges: Partial<UserSettings>) => Promise<void>;
 
 export function SettingsPanel() {
   const { messages } = useLocale();
   const { updateSettings } = useSettings();
   const [saveFeedback, setSaveFeedback] = useState<"saved" | "failed" | null>(null);
+  const [currentPage, setCurrentPage] = useState<"main" | "timeZone">("main");
 
   // Never rejects: the provider already reverted the optimistic change; here the user is told.
   async function saveAndConfirm(settingsChanges: Partial<UserSettings>) {
@@ -45,204 +43,334 @@ export function SettingsPanel() {
           {messages.settingsSaveFailed}
         </p>
       )}
-      <InterfaceLanguageSection onSave={saveAndConfirm} />
-      <NewsLanguagesSection onSave={saveAndConfirm} />
-      <TimeZoneSection onSave={saveAndConfirm} />
-      <WindowBehaviorSection onSave={saveAndConfirm} />
+
+      {currentPage === "main" ? (
+        <div key="main" className="settings-page view-enter-back">
+          <h2 className="settings-panel__title">{messages.settings}</h2>
+          <GeneralGroup onSave={saveAndConfirm} />
+          <NewsLanguagesGroup onSave={saveAndConfirm} />
+          <ScheduleGroup onOpenTimeZonePicker={() => setCurrentPage("timeZone")} />
+          <AboutGroup />
+        </div>
+      ) : (
+        <div key="timeZone" className="settings-page view-enter-forward">
+          <TimeZonePicker onSave={saveAndConfirm} onClose={() => setCurrentPage("main")} />
+        </div>
+      )}
     </div>
   );
 }
 
-type SectionProps = { onSave: (settingsChanges: Partial<UserSettings>) => Promise<void> };
+// ---------- building blocks ----------
 
-function WindowBehaviorSection({ onSave }: SectionProps) {
-  const { messages } = useLocale();
-  const { userSettings } = useSettings();
+function SettingsGroup({ title, footer, children }: { title: string; footer?: string; children: ReactNode }) {
+  const headingId = useId();
   return (
-    <section className="settings-section">
-      <h2 className="settings-section__title">{messages.windowBehaviorTitle}</h2>
-      <label className="settings-panel__option">
-        <input
-          type="checkbox"
-          checked={userSettings.closeOnFocusLoss}
-          onChange={(changeEvent) => onSave({ closeOnFocusLoss: changeEvent.target.checked })}
-        />
-        <span>{messages.closeOnFocusLoss}</span>
-      </label>
-      <p className="settings-section__hint">{messages.closeOnFocusLossHint}</p>
+    <section className="settings-group" aria-labelledby={headingId}>
+      <h3 id={headingId} className="settings-group__title">
+        {title}
+      </h3>
+      <div className="settings-card">{children}</div>
+      {footer && <p className="settings-group__footer">{footer}</p>}
     </section>
   );
 }
 
-function InterfaceLanguageSection({ onSave }: SectionProps) {
-  const headingId = useId();
+function ToggleRow({ label, description, isOn, isDisabled = false, onToggle }: { label: string; description?: string; isOn: boolean; isDisabled?: boolean; onToggle: (isOn: boolean) => void }) {
+  return (
+    <label className={`settings-row ${isDisabled ? "settings-row--disabled" : ""}`}>
+      <span className="settings-row__text">
+        <span className="settings-row__label">{label}</span>
+        {description && <span className="settings-row__description">{description}</span>}
+      </span>
+      <input type="checkbox" role="switch" className="toggle-switch" checked={isOn} disabled={isDisabled} onChange={(changeEvent) => onToggle(changeEvent.target.checked)} />
+    </label>
+  );
+}
+
+// ---------- groups ----------
+
+function GeneralGroup({ onSave }: { onSave: SaveSettings }) {
   const { messages, locale } = useLocale();
   const { userSettings, systemLocale } = useSettings();
+  const labelId = useId();
   const languageOptions: { interfaceLanguage: InterfaceLanguage; label: string }[] = [
-    { interfaceLanguage: "system", label: messages.interfaceLanguageAutomatic(describeLanguage(systemLocale, locale)) },
+    { interfaceLanguage: "system", label: messages.automaticShort },
     // Each language is written in itself, so it stays recognizable whatever language is active.
     { interfaceLanguage: "pt-BR", label: "Português" },
     { interfaceLanguage: "en", label: "English" },
   ];
 
   return (
-    <section className="settings-section">
-      <h2 id={headingId} className="settings-section__title">
-        {messages.interfaceLanguageTitle}
-      </h2>
-      {/* Named group: both this and the time zone have an "Automatic" option. */}
-      <div role="radiogroup" aria-labelledby={headingId}>
-        {languageOptions.map((languageOption) => (
-          <label key={languageOption.interfaceLanguage} className="settings-panel__option">
-            <input
-              type="radio"
-              name="interface-language"
-              checked={userSettings.interfaceLanguage === languageOption.interfaceLanguage}
-              onChange={() => onSave({ interfaceLanguage: languageOption.interfaceLanguage })}
-            />
-            <span>{languageOption.label}</span>
-          </label>
-        ))}
+    <SettingsGroup title={messages.generalTitle}>
+      <div className="settings-row settings-row--stacked">
+        <span className="settings-row__text">
+          <span id={labelId} className="settings-row__label">
+            {messages.interfaceLanguageTitle}
+          </span>
+          {userSettings.interfaceLanguage === "system" && (
+            <span className="settings-row__description">{messages.interfaceLanguageAutomatic(describeLanguage(systemLocale, locale))}</span>
+          )}
+        </span>
+        <div className="segmented-choice" role="radiogroup" aria-labelledby={labelId}>
+          {languageOptions.map((languageOption) => (
+            <label key={languageOption.interfaceLanguage} className="segmented-choice__option">
+              <input
+                type="radio"
+                name="interface-language"
+                checked={userSettings.interfaceLanguage === languageOption.interfaceLanguage}
+                onChange={() => onSave({ interfaceLanguage: languageOption.interfaceLanguage })}
+              />
+              <span>{languageOption.label}</span>
+            </label>
+          ))}
+        </div>
       </div>
-    </section>
+      <ToggleRow
+        label={messages.closeOnFocusLoss}
+        description={messages.closeOnFocusLossHint}
+        isOn={userSettings.closeOnFocusLoss}
+        onToggle={(isOn) => onSave({ closeOnFocusLoss: isOn })}
+      />
+    </SettingsGroup>
   );
 }
 
-function NewsLanguagesSection({ onSave }: SectionProps) {
-  const { messages, locale } = useLocale();
-  const { userSettings } = useSettings();
+function useNewsSources(): NewsSource[] | null {
   const apiClient = useApiClient();
-  const [availableLanguageCodes, setAvailableLanguageCodes] = useState<string[] | null>(null);
-  const showsSkeleton = useDelayedFlag(availableLanguageCodes === null);
-
+  const [newsSources, setNewsSources] = useState<NewsSource[] | null>(null);
   useEffect(() => {
     apiClient
       .listSources()
-      .then((newsSources) => setAvailableLanguageCodes([...new Set(newsSources.map((newsSource) => newsSource.languageCode))].sort()))
-      .catch(() => setAvailableLanguageCodes([]));
+      .then(setNewsSources)
+      .catch(() => setNewsSources([]));
   }, [apiClient]);
+  return newsSources;
+}
 
-  if (availableLanguageCodes === null) {
+function NewsLanguagesGroup({ onSave }: { onSave: SaveSettings }) {
+  const { messages, locale } = useLocale();
+  const { userSettings } = useSettings();
+  const newsSources = useNewsSources();
+  const showsSkeleton = useDelayedFlag(newsSources === null);
+
+  if (newsSources === null) {
     return (
-      <section className="settings-section">
-        <h2 className="settings-section__title">{messages.newsLanguagesTitle}</h2>
+      <SettingsGroup title={messages.newsTitle}>
         {showsSkeleton ? (
           <SkeletonGroup label={messages.loadingPanel}>
-            {[0, 1].map((optionIndex) => (
-              <div key={optionIndex} className="settings-panel__option">
-                <SkeletonBlock width={14} height={14} radius={3} />
-                <SkeletonBlock width={90} height={13} />
+            {[0, 1].map((rowIndex) => (
+              <div key={rowIndex} className="settings-row">
+                <SkeletonBlock width={140} height={13} />
+                <SkeletonBlock width={34} height={20} radius={10} />
               </div>
             ))}
           </SkeletonGroup>
         ) : (
           <div className="settings-pending" />
         )}
-      </section>
+      </SettingsGroup>
     );
   }
 
-  // Narrowed once here: TypeScript does not carry the null check into nested functions.
-  const loadedLanguageCodes = availableLanguageCodes;
+  const sourceCountByLanguage = new Map<string, number>();
+  for (const newsSource of newsSources) {
+    sourceCountByLanguage.set(newsSource.languageCode, (sourceCountByLanguage.get(newsSource.languageCode) ?? 0) + 1);
+  }
+  const availableLanguageCodes = [...sourceCountByLanguage.keys()].sort();
   // An empty saved list means "all languages".
-  const selectedLanguageCodes = userSettings.newsLanguageCodes.length === 0 ? loadedLanguageCodes : userSettings.newsLanguageCodes;
+  const selectedLanguageCodes = userSettings.newsLanguageCodes.length === 0 ? availableLanguageCodes : userSettings.newsLanguageCodes;
 
-  function toggleLanguage(languageCode: string) {
-    const nextSelection = selectedLanguageCodes.includes(languageCode)
-      ? selectedLanguageCodes.filter((selectedCode) => selectedCode !== languageCode)
-      : [...selectedLanguageCodes, languageCode];
-    const selectsEverything = loadedLanguageCodes.every((availableCode) => nextSelection.includes(availableCode));
+  function toggleLanguage(languageCode: string, isOn: boolean) {
+    const nextSelection = isOn ? [...selectedLanguageCodes, languageCode] : selectedLanguageCodes.filter((selectedCode) => selectedCode !== languageCode);
+    const selectsEverything = availableLanguageCodes.every((availableCode) => nextSelection.includes(availableCode));
     // Saving "all" as an empty list lets languages added to the sources later appear automatically.
     return onSave({ newsLanguageCodes: selectsEverything ? [] : nextSelection });
   }
 
   return (
-    <section className="settings-section">
-      <h2 className="settings-section__title">{messages.newsLanguagesTitle}</h2>
-      {loadedLanguageCodes.map((languageCode) => {
+    <SettingsGroup title={messages.newsTitle} footer={messages.newsLanguagesHint}>
+      {availableLanguageCodes.map((languageCode) => {
         const isSelected = selectedLanguageCodes.includes(languageCode);
-        const isLastSelected = isSelected && selectedLanguageCodes.length === 1;
         return (
-          <label key={languageCode} className="settings-panel__option">
-            <input type="checkbox" checked={isSelected} disabled={isLastSelected} onChange={() => toggleLanguage(languageCode)} />
-            <span>{describeLanguage(languageCode, locale)}</span>
-          </label>
+          <ToggleRow
+            key={languageCode}
+            label={describeLanguage(languageCode, locale)}
+            description={messages.sourceCount(sourceCountByLanguage.get(languageCode) ?? 0)}
+            isOn={isSelected}
+            // The last selected language cannot be turned off: no news at all makes no sense.
+            isDisabled={isSelected && selectedLanguageCodes.length === 1}
+            onToggle={(isOn) => toggleLanguage(languageCode, isOn)}
+          />
         );
       })}
-      <p className="settings-section__hint">{messages.newsLanguagesHint}</p>
-    </section>
+    </SettingsGroup>
   );
 }
 
-function TimeZoneSection({ onSave }: SectionProps) {
-  const headingId = useId();
+function ScheduleGroup({ onOpenTimeZonePicker }: { onOpenTimeZonePicker: () => void }) {
   const { messages, locale } = useLocale();
-  const { userSettings, systemTimeZone } = useSettings();
-  const [searchText, setSearchText] = useState("");
-
-  const timeZonePreference = userSettings.timeZonePreference;
-  const selectedManualTimeZone = timeZonePreference.mode === "manual" ? timeZonePreference.timeZoneId : null;
-
-  const matchingTimeZones = useMemo(() => {
-    const normalizedQuery = normalizeForSearch(searchText.trim());
-    return listSupportedTimeZones()
-      .filter((timeZoneId) => normalizeForSearch(timeZoneId).includes(normalizedQuery))
-      .slice(0, maximumVisibleTimeZones);
-  }, [searchText]);
+  const { userSettings, effectiveTimeZone } = useSettings();
+  const currentZone = describeTimeZoneOption(effectiveTimeZone, locale);
 
   return (
-    <section className="settings-section">
-      <h2 id={headingId} className="settings-section__title">
-        {messages.timeZoneTitle}
-      </h2>
-
-      <div role="radiogroup" aria-labelledby={headingId}>
-        <label className="settings-panel__option">
-          <input type="radio" name="time-zone-mode" checked={timeZonePreference.mode === "system"} onChange={() => onSave({ timeZonePreference: { mode: "system" } })} />
-          <span>
-            {messages.timeZoneAutomatic(systemTimeZone.replace(/_/g, " "))}
-            <small>{describeTimeZone(systemTimeZone, locale)}</small>
+    <SettingsGroup title={messages.scheduleTitle}>
+      <button type="button" className="settings-row settings-row--link" onClick={onOpenTimeZonePicker}>
+        <span className="settings-row__text">
+          <span className="settings-row__label">{messages.timeZoneTitle}</span>
+          <span className="settings-row__description">
+            {userSettings.timeZonePreference.mode === "system" ? messages.timeZoneFollowsComputer : messages.timeZoneChosenByYou}
           </span>
-        </label>
+        </span>
+        <span className="settings-row__value">
+          {currentZone.cityName} · {currentZone.offsetLabel}
+        </span>
+        <ChevronRightIcon size={14} />
+      </button>
+    </SettingsGroup>
+  );
+}
 
-        <label className="settings-panel__option">
-          <input
-            type="radio"
-            name="time-zone-mode"
-            checked={timeZonePreference.mode === "manual"}
-            onChange={() => onSave({ timeZonePreference: { mode: "manual", timeZoneId: selectedManualTimeZone ?? systemTimeZone } })}
-          />
-          <span>{messages.timeZoneManual}</span>
-        </label>
+function AboutGroup() {
+  const { messages } = useLocale();
+  const newsSources = useNewsSources();
+  const [appVersion, setAppVersion] = useState<string | null>(null);
+  useEffect(() => {
+    getAppVersion()
+      .then(setAppVersion)
+      .catch(() => setAppVersion(null));
+  }, []);
+
+  const dataSources = [
+    ...(newsSources ?? []).map((newsSource) => ({ name: newsSource.displayName, detail: messages.newsSourceDetail, url: newsSource.homepageUrl })),
+    { name: "Jolpica F1", detail: messages.calendarSourceDetail, url: "https://github.com/jolpica/jolpica-f1" },
+    { name: "f1-circuits", detail: messages.circuitSourceDetail, url: "https://github.com/bacinger/f1-circuits" },
+    { name: "Open-Meteo", detail: messages.weatherSourceDetail, url: "https://open-meteo.com" },
+  ];
+
+  return (
+    <SettingsGroup title={messages.aboutTitle} footer={messages.trademarkNotice}>
+      <div className="settings-row">
+        <span className="settings-row__label">{messages.versionLabel}</span>
+        <span className="settings-row__value">{appVersion ?? messages.developmentBuild}</span>
+      </div>
+      <button type="button" className="settings-row settings-row--link" onClick={() => openExternalUrl(REPOSITORY_URL)}>
+        <span className="settings-row__text">
+          <span className="settings-row__label">{messages.sourceCodeLabel}</span>
+          <span className="settings-row__description">{messages.licenseDescription}</span>
+        </span>
+        <ChevronRightIcon size={14} />
+      </button>
+      <details className="settings-disclosure">
+        <summary className="settings-row settings-row--link">
+          <span className="settings-row__label">{messages.dataSourcesTitle}</span>
+          <ChevronRightIcon size={14} />
+        </summary>
+        <ul className="data-source-list">
+          {dataSources.map((dataSource) => (
+            <li key={dataSource.name}>
+              <button type="button" className="link-button" onClick={() => dataSource.url && openExternalUrl(dataSource.url)}>
+                {dataSource.name}
+              </button>
+              <small>{dataSource.detail}</small>
+            </li>
+          ))}
+        </ul>
+      </details>
+    </SettingsGroup>
+  );
+}
+
+// ---------- time zone picker ----------
+
+function TimeZonePicker({ onSave, onClose }: { onSave: SaveSettings; onClose: () => void }) {
+  const { messages, locale } = useLocale();
+  const { userSettings, systemTimeZone } = useSettings();
+  const [searchQuery, setSearchQuery] = useState("");
+  const scrollTargetRowRef = useRef<HTMLButtonElement>(null);
+
+  const timeZonePreference = userSettings.timeZonePreference;
+  const selectedManualZone = timeZonePreference.mode === "manual" ? timeZonePreference.timeZoneId : null;
+  // Where the list opens: the chosen zone, or the computer's one in automatic mode.
+  const scrollTargetZone = selectedManualZone ?? systemTimeZone;
+  // ~400 zones described once (≈75 ms), not on every keystroke.
+  const allTimeZoneOptions = useMemo(() => buildTimeZoneOptions(listSupportedTimeZones(), locale), [locale]);
+  const offsetGroups = useMemo(() => groupByOffset(filterTimeZoneOptions(allTimeZoneOptions, searchQuery)), [allTimeZoneOptions, searchQuery]);
+  const systemZone = describeTimeZoneOption(systemTimeZone, locale);
+
+  // Open the list at the current zone instead of at "GMT−11" (Pacific islands).
+  useLayoutEffect(() => {
+    scrollTargetRowRef.current?.scrollIntoView?.({ block: "center" });
+  }, []);
+
+  function choose(nextPreference: UserSettings["timeZonePreference"]) {
+    onSave({ timeZonePreference: nextPreference });
+    onClose();
+  }
+
+  return (
+    <div className="time-zone-picker">
+      <div className="time-zone-picker__header">
+        <button type="button" className="icon-button icon-button--labeled" onClick={onClose}>
+          <BackIcon size={14} /> {messages.settings}
+        </button>
+        <h2 className="settings-panel__title">{messages.timeZoneTitle}</h2>
       </div>
 
-      {timeZonePreference.mode === "manual" && (
-        <div className="time-zone-picker">
-          <input
-            className="time-zone-picker__search"
-            type="search"
-            placeholder={messages.timeZoneSearchPlaceholder}
-            value={searchText}
-            onChange={(changeEvent) => setSearchText(changeEvent.target.value)}
-          />
-          <ul className="time-zone-picker__list" role="listbox">
-            {matchingTimeZones.map((timeZoneId) => (
-              <li key={timeZoneId}>
+      <input
+        className="time-zone-picker__search"
+        type="search"
+        placeholder={messages.timeZoneSearchPlaceholder}
+        aria-label={messages.timeZoneSearchPlaceholder}
+        value={searchQuery}
+        onChange={(changeEvent) => setSearchQuery(changeEvent.target.value)}
+        autoFocus
+      />
+
+      <button
+        type="button"
+        className="time-zone-option time-zone-option--automatic"
+        aria-pressed={timeZonePreference.mode === "system"}
+        onClick={() => choose({ mode: "system" })}
+      >
+        <span className="time-zone-option__text">
+          <span className="time-zone-option__city">{messages.useComputerTimeZone}</span>
+          <span className="time-zone-option__detail">
+            {systemZone.cityName} · {systemZone.genericName}
+          </span>
+        </span>
+        <span className="time-zone-option__offset">{systemZone.offsetLabel}</span>
+      </button>
+
+      {offsetGroups.length === 0 && <p className="empty-state">{messages.noTimeZoneFound}</p>}
+      <div className="time-zone-picker__list" role="list">
+        {offsetGroups.map((offsetGroup) => (
+          <div key={offsetGroup.offsetLabel} role="listitem">
+            <h4 className="time-zone-picker__offset-heading">{offsetGroup.offsetLabel}</h4>
+            {offsetGroup.timeZoneOptions.map((timeZoneOption) => {
+              const isSelected = timeZoneOption.timeZoneId === selectedManualZone;
+              return (
                 <button
+                  key={timeZoneOption.timeZoneId}
+                  ref={timeZoneOption.timeZoneId === scrollTargetZone ? scrollTargetRowRef : undefined}
                   type="button"
-                  role="option"
-                  aria-selected={timeZoneId === selectedManualTimeZone}
-                  className="time-zone-picker__item"
-                  onClick={() => onSave({ timeZonePreference: { mode: "manual", timeZoneId } })}
+                  className="time-zone-option"
+                  aria-pressed={isSelected}
+                  onClick={() => choose({ mode: "manual", timeZoneId: timeZoneOption.timeZoneId })}
                 >
-                  <span>{timeZoneId.replace(/_/g, " ")}</span>
-                  <small>{describeTimeZone(timeZoneId, locale)}</small>
+                  <span className="time-zone-option__text">
+                    <span className="time-zone-option__city">{timeZoneOption.cityName}</span>
+                    <span className="time-zone-option__detail">
+                      {timeZoneOption.regionName} · {timeZoneOption.genericName}
+                    </span>
+                  </span>
+                  {isSelected && <span className="time-zone-option__check">✓</span>}
                 </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </section>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }

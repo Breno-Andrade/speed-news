@@ -65,8 +65,8 @@ test("the race card tabs show last GP, circuit and weather", async ({ page }) =>
 test("choosing only Portuguese news filters the list and the count", async ({ page, request }) => {
   await openHome(page);
   await page.getByRole("button", { name: "Configurações" }).click();
-  await page.getByRole("checkbox", { name: "Inglês" }).uncheck();
-  await expect(page.getByRole("checkbox", { name: "Português" })).toBeDisabled();
+  await page.getByRole("switch", { name: /^Inglês/ }).uncheck();
+  await expect(page.getByRole("switch", { name: /^Português/ })).toBeDisabled();
   await page.getByRole("button", { name: "Voltar" }).click();
 
   await expect(page.locator(".unread-pill")).toHaveText("2");
@@ -78,7 +78,8 @@ test("choosing only Portuguese news filters the list and the count", async ({ pa
 test("switching the interface to English translates the whole app", async ({ page }) => {
   await openHome(page);
   await page.getByRole("button", { name: "Configurações" }).click();
-  await page.getByRole("radiogroup", { name: "Idioma do app" }).getByRole("radio", { name: "English" }).check();
+  // Users click the visible segment label; the native radio underneath is visually hidden.
+  await page.getByRole("radiogroup", { name: "Idioma do app" }).getByText("English").click();
   await page.getByRole("button", { name: "Back" }).click();
 
   await expect(page.getByRole("heading", { name: "Singapore GP" })).toBeVisible();

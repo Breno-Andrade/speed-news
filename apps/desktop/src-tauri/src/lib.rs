@@ -46,6 +46,8 @@ pub fn run() {
             updates::install_pending_update,
             gnome_extension::gnome_extension_status,
             gnome_extension::install_gnome_extension,
+            autostart::is_launch_at_login_enabled,
+            autostart::set_launch_at_login,
             quit_app
         ])
         .setup(|application| {

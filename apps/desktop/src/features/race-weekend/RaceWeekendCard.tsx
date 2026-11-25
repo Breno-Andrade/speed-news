@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { RaceEvent } from "../../shared/api/types";
+import type { RaceEvent, RaceSession } from "../../shared/api/types";
 import { useLocale } from "../../shared/i18n/LocaleProvider";
 import { describeTimeZone, formatCountdown, formatTimeOfDay, groupSessionsByDay } from "../../shared/time/timeZone";
 import { useSettings } from "../settings/SettingsProvider";
@@ -8,7 +8,7 @@ import { AnimatedHeight } from "../../shared/ui/AnimatedHeight";
 import { useDelayedFlag } from "../../shared/ui/Skeleton";
 import { CircuitPanel, ForecastPanel, LastRacePanel } from "./InsightPanels";
 import { RaceCardSkeleton } from "./RaceCardSkeletons";
-import { classifySessions } from "./sessionStatus";
+import { classifySessions, estimatedEndsAt, type SessionStatus } from "./sessionStatus";
 import { useCurrentInstant, useRaceWeekend } from "./useRaceWeekend";
 
 type RaceCardTab = "schedule" | "lastRace" | "circuit" | "weather";
@@ -91,6 +91,23 @@ export function RaceWeekendCard({ onChangeTimeZone }: { onChangeTimeZone: () => 
   );
 }
 
+/** Right column of a session row: always says something, so the row reads end to end. */
+function SessionRowStatus({ raceSession, sessionStatus, currentInstant }: { raceSession: RaceSession; sessionStatus: SessionStatus; currentInstant: Date }) {
+  const { messages, locale } = useLocale();
+  const { effectiveTimeZone } = useSettings();
+  if (sessionStatus === "live") return <span className="session-row__badge session-row__badge--live">● {messages.liveNow}</span>;
+  if (sessionStatus === "finished") return <span className="session-row__meta">✓ {messages.sessionFinished}</span>;
+  if (sessionStatus === "next") {
+    return <span className="session-row__badge">{messages.startsIn(formatCountdown(new Date(raceSession.startsAt).getTime() - currentInstant.getTime()))}</span>;
+  }
+  if (!raceSession.startTimeConfirmed) return null;
+  return (
+    <span className="session-row__meta" title={messages.estimatedEndHint}>
+      {messages.endsAround(formatTimeOfDay(estimatedEndsAt(raceSession), effectiveTimeZone, locale))}
+    </span>
+  );
+}
+
 function SessionSchedule({ raceEvent, currentInstant }: { raceEvent: RaceEvent; currentInstant: Date }) {
   const { messages, locale } = useLocale();
   const { effectiveTimeZone } = useSettings();
@@ -101,7 +118,14 @@ function SessionSchedule({ raceEvent, currentInstant }: { raceEvent: RaceEvent; 
     <ol className="session-schedule">
       {dayGroups.map((dayGroup) => (
         <li key={dayGroup.dayKey} className="session-schedule__day">
-          <h3 className="session-schedule__day-label">{dayGroup.dayLabel}</h3>
+          <h3 className="session-schedule__day-label" aria-label={dayGroup.dayLabel} title={dayGroup.dayLabel}>
+            <span className="session-schedule__weekday" aria-hidden="true">
+              {dayGroup.weekdayShort}
+            </span>
+            <span className="session-schedule__day-number" aria-hidden="true">
+              {dayGroup.dayOfMonth}
+            </span>
+          </h3>
           <ul>
             {dayGroup.sessions.map((raceSession) => {
               const sessionStatus = statusBySession.get(raceSession) ?? "upcoming";
@@ -111,12 +135,7 @@ function SessionSchedule({ raceEvent, currentInstant }: { raceEvent: RaceEvent; 
                     {raceSession.startTimeConfirmed ? formatTimeOfDay(raceSession.startsAt, effectiveTimeZone, locale) : messages.timeToBeConfirmed}
                   </span>
                   <span className="session-row__name">{messages.sessionLabels[raceSession.sessionKind]}</span>
-                  {sessionStatus === "live" && <span className="session-row__badge session-row__badge--live">● {messages.liveNow}</span>}
-                  {sessionStatus === "next" && (
-                    <span className="session-row__badge">
-                      {messages.startsIn(formatCountdown(new Date(raceSession.startsAt).getTime() - currentInstant.getTime()))}
-                    </span>
-                  )}
+                  <SessionRowStatus raceSession={raceSession} sessionStatus={sessionStatus} currentInstant={currentInstant} />
                 </li>
               );
             })}

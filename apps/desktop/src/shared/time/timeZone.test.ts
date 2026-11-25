@@ -34,6 +34,13 @@ describe("groupSessionsByDay", () => {
     ]);
   });
 
+  it("gives the compact weekday and day of month for the day column", () => {
+    const [fridayGroup] = groupSessionsByDay(singaporeSessions, "America/Sao_Paulo", "pt-BR");
+    expect(fridayGroup).toMatchObject({ weekdayShort: "sex", dayOfMonth: "9" });
+    const [englishFriday] = groupSessionsByDay(singaporeSessions, "America/Sao_Paulo", "en-US");
+    expect(englishFriday).toMatchObject({ weekdayShort: "Fri", dayOfMonth: "9" });
+  });
+
   it("moves sessions to another day when the time zone crosses midnight", () => {
     // New Zealand in October is NZDT (UTC+13): sprint qualifying slides to Saturday, qualifying to Sunday
     // and the race (12:00 UTC Sunday) to 01:00 on Monday.

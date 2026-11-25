@@ -38,6 +38,8 @@ describe("RaceWeekendCard", () => {
     const fridayGroup = screen.getByRole("heading", { name: "Sexta-feira, 9 de outubro" }).closest("li")!;
     expect(within(fridayGroup).getByText("05:30")).toBeInTheDocument();
     expect(within(fridayGroup).getByText("Treino Livre 1")).toBeInTheDocument();
+    // That weekend is over: every row says so on the right instead of leaving it empty.
+    expect(within(fridayGroup).getAllByText("✓ encerrada")).toHaveLength(2);
     expect(screen.getByText("Fuso: Horário Padrão de Brasília (GMT-3)", { exact: false })).toBeInTheDocument();
     // Track drawing with its license attribution.
     expect(screen.getByRole("img", { name: "Marina Bay Street Circuit" })).toBeInTheDocument();

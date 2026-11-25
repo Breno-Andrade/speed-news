@@ -21,7 +21,12 @@ export function formatTimeOfDay(isoInstant: string, effectiveTimeZone: string, l
 
 export type SessionDayGroup = {
   dayKey: string;
+  /** Full label for screen readers: "Sexta-feira, 9 de outubro". */
   dayLabel: string;
+  /** Compact column label: "SEX" / "FRI". */
+  weekdayShort: string;
+  /** "9". */
+  dayOfMonth: string;
   sessions: RaceSession[];
 };
 
@@ -32,6 +37,8 @@ export type SessionDayGroup = {
 export function groupSessionsByDay(raceSessions: RaceSession[], effectiveTimeZone: string, locale: string): SessionDayGroup[] {
   const dayKeyFormatter = new Intl.DateTimeFormat("en-CA", { timeZone: effectiveTimeZone, year: "numeric", month: "2-digit", day: "2-digit" });
   const dayLabelFormatter = new Intl.DateTimeFormat(locale, { timeZone: effectiveTimeZone, weekday: "long", day: "numeric", month: "long" });
+  const weekdayShortFormatter = new Intl.DateTimeFormat(locale, { timeZone: effectiveTimeZone, weekday: "short" });
+  const dayOfMonthFormatter = new Intl.DateTimeFormat(locale, { timeZone: effectiveTimeZone, day: "numeric" });
 
   const sortedSessions = [...raceSessions].sort((firstSession, secondSession) => firstSession.startsAt.localeCompare(secondSession.startsAt));
   const dayGroups: SessionDayGroup[] = [];
@@ -42,7 +49,14 @@ export function groupSessionsByDay(raceSessions: RaceSession[], effectiveTimeZon
     if (lastGroup && lastGroup.dayKey === dayKey) {
       lastGroup.sessions.push(raceSession);
     } else {
-      dayGroups.push({ dayKey, dayLabel: capitalizeFirstLetter(dayLabelFormatter.format(sessionInstant)), sessions: [raceSession] });
+      dayGroups.push({
+        dayKey,
+        dayLabel: capitalizeFirstLetter(dayLabelFormatter.format(sessionInstant)),
+        // pt-BR yields "sex." — drop the abbreviation dot, the column is uppercased by CSS.
+        weekdayShort: weekdayShortFormatter.format(sessionInstant).replace(/\.$/, ""),
+        dayOfMonth: dayOfMonthFormatter.format(sessionInstant),
+        sessions: [raceSession],
+      });
     }
   }
   return dayGroups;

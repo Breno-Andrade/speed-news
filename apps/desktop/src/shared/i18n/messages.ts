@@ -22,6 +22,9 @@ export type Messages = {
   liveNow: string;
   startsIn: (countdownText: string) => string;
   timeToBeConfirmed: string;
+  sessionFinished: string;
+  endsAround: (endTimeText: string) => string;
+  estimatedEndHint: string;
   timesShownIn: (timeZoneDescription: string) => string;
   change: string;
   noUpcomingRace: string;
@@ -142,6 +145,9 @@ const portugueseMessages: Messages = {
   liveNow: "agora",
   startsIn: (countdownText) => `em ${countdownText}`,
   timeToBeConfirmed: "a confirmar",
+  sessionFinished: "encerrada",
+  endsAround: (endTimeText) => `até ${endTimeText}`,
+  estimatedEndHint: "Término estimado pela duração típica da sessão",
   timesShownIn: (timeZoneDescription) => `Fuso: ${timeZoneDescription}`,
   change: "alterar",
   noUpcomingRace: "Nenhuma corrida no calendário.",
@@ -271,6 +277,9 @@ const englishMessages: Messages = {
   liveNow: "now",
   startsIn: (countdownText) => `in ${countdownText}`,
   timeToBeConfirmed: "TBC",
+  sessionFinished: "finished",
+  endsAround: (endTimeText) => `until ${endTimeText}`,
+  estimatedEndHint: "End time estimated from the session's typical length",
   timesShownIn: (timeZoneDescription) => `Time zone: ${timeZoneDescription}`,
   change: "change",
   noUpcomingRace: "No race on the calendar.",

@@ -11,6 +11,12 @@ const estimatedDurationMinutesBySession: Record<SessionKind, number> = {
   race: 120,
 };
 
+/** Estimated end of a session (start + typical duration). */
+export function estimatedEndsAt(raceSession: RaceSession): string {
+  const startsAtMs = new Date(raceSession.startsAt).getTime();
+  return new Date(startsAtMs + estimatedDurationMinutesBySession[raceSession.sessionKind] * 60_000).toISOString();
+}
+
 export type SessionStatus = "finished" | "live" | "next" | "upcoming";
 
 /** Finished, live, the next one to start (gets the countdown) or later. */

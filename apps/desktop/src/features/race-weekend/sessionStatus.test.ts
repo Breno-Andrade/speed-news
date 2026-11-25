@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RaceSession } from "../../shared/api/types";
-import { classifySessions } from "./sessionStatus";
+import { classifySessions, estimatedEndsAt } from "./sessionStatus";
 
 const qualifying: RaceSession = { sessionKind: "qualifying", startsAt: "2026-10-10T13:00:00Z", startTimeConfirmed: true };
 const race: RaceSession = { sessionKind: "race", startsAt: "2026-10-11T12:00:00Z", startTimeConfirmed: true };
@@ -27,5 +27,12 @@ describe("classifySessions", () => {
   it("gives the race two hours before calling it finished", () => {
     expect(statusesAt("2026-10-11T13:59:00Z")).toEqual(["finished", "finished", "live"]);
     expect(statusesAt("2026-10-11T14:01:00Z")).toEqual(["finished", "finished", "finished"]);
+  });
+});
+
+describe("estimatedEndsAt", () => {
+  it("adds the typical session length to the start", () => {
+    expect(estimatedEndsAt(race)).toBe("2026-10-11T14:00:00.000Z");
+    expect(estimatedEndsAt(firstPractice)).toBe("2026-10-09T09:30:00.000Z");
   });
 });

@@ -762,14 +762,40 @@ button {
   padding: 0;
 }
 
+/* Day in a narrow left column, sessions beside it: no row is spent on the day heading alone. */
+.session-schedule__day {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 10px;
+  /* The day block sits in the vertical middle of its sessions, whether there are one or two. */
+  align-items: center;
+  padding: 6px 0;
+}
+
 .session-schedule__day + .session-schedule__day {
-  margin-top: 8px;
+  border-top: 1px solid var(--color-border);
 }
 
 .session-schedule__day-label {
-  margin: 0 0 2px;
-  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0;
+  line-height: 1.1;
+}
+
+.session-schedule__weekday {
+  color: var(--color-text-muted);
+  font-size: 10px;
   font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.session-schedule__day-number {
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .session-row {
@@ -778,6 +804,12 @@ button {
   gap: 10px;
   padding: 3px 0;
   font-size: 13px;
+}
+
+.session-row__meta {
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
 }
 
 .session-row__time {
@@ -792,8 +824,6 @@ button {
 
 .session-row--finished {
   color: var(--color-text-muted);
-  text-decoration: line-through;
-  text-decoration-color: var(--color-border);
 }
 
 .session-row__badge {

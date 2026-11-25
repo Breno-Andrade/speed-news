@@ -22,10 +22,13 @@ function SessionRowsSkeleton() {
   return (
     <div className="race-card__skeleton-rows">
       {[0, 1, 2].map((dayIndex) => (
-        <div key={dayIndex} className="race-card__skeleton-day">
-          <SkeletonBlock width={140} height={11} />
-          <SkeletonBlock width="70%" height={13} />
-          {dayIndex < 2 && <SkeletonBlock width="60%" height={13} />}
+        // Same shape as the schedule: day column on the left, sessions beside it.
+        <div key={dayIndex} className="session-schedule__day">
+          <SkeletonBlock width={32} height={30} radius={6} />
+          <div className="race-card__skeleton-day">
+            <SkeletonBlock width="85%" height={13} />
+            {dayIndex < 2 && <SkeletonBlock width="70%" height={13} />}
+          </div>
         </div>
       ))}
     </div>

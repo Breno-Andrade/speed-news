@@ -152,8 +152,8 @@ describe("SettingsPanel", () => {
     const aboutGroup = await screen.findByRole("region", { name: "Sobre" });
 
     expect(within(aboutGroup).getByText("desenvolvimento")).toBeInTheDocument(); // no app version in the browser
-    // GPL §5: interactive programs show the copyright and the license to the user.
-    expect(within(aboutGroup).getByText(/© 2026 Breno Andrade · software livre, licença GPL-3.0/)).toBeInTheDocument();
+    // AGPL §5: interactive programs show the copyright and the license to the user.
+    expect(within(aboutGroup).getByText(/© 2026 Breno Andrade · software livre, licença AGPL-3.0/)).toBeInTheDocument();
     expect(screen.getByText(/sem vínculo com a Fórmula 1/)).toBeInTheDocument();
 
     await userInteraction.click(within(aboutGroup).getByText("Fontes de dados"));

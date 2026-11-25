@@ -2,7 +2,7 @@
   "name": "speed-news",
   "private": true,
   "description": "Tray widget that aggregates Formula 1 news and the race weekend schedule",
-  "license": "GPL-3.0-or-later",
+  "license": "AGPL-3.0-or-later",
   "workspaces": [
     "apps/desktop"
   ],

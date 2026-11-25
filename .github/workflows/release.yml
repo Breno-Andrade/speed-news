@@ -60,4 +60,6 @@ jobs:
             **Windows:** `.exe` installer. **macOS:** `.dmg` (not notarized yet: right-click → Open the first time).
             Already installed? The app updates itself in the background.
           releaseDraft: true
-          prerelease: false
+          # Tags with a suffix (v0.1.0-rc.1) are rehearsals: pre-releases are ignored by
+          # releases/latest, so installed apps never update to them.
+          prerelease: ${{ contains(github.ref_name, '-') }}

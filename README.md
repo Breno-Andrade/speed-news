@@ -29,8 +29,12 @@ They build and update like Linux, but have not been tested on real machines yet 
 ```
 Tauri (Rust glue: tray, popover, sidecar)
  ├─ WebView: React + TS ──── HTTP + SSE (127.0.0.1:<random port>, random token)
+ │    only while the popover is open (destroyed 60 s after closing, to free its memory)
  └─ sidecar: Go news-api ─── RSS feeds · Jolpica F1 calendar · f1-circuits layouts → SQLite
+      └─ stdout → tray state (unread count, settings), so the tray works without the webview
 ```
+
+Step-by-step flows (startup, tray updates, popover lifecycle, updates): [docs/fluxos.md](docs/fluxos.md).
 
 | Data | Source | Refresh |
 |---|---|---|
@@ -68,7 +72,7 @@ On GNOME the tray needs the *AppIndicator* extension (preinstalled on Ubuntu).
 | Rust | popover positioning and the click-after-focus-loss guard | `cargo test` in `apps/desktop/src-tauri` |
 | End-to-end | real UI + real Go backend + fixture server, in Chromium (and WebKit in CI) | `make test-e2e` |
 
-External sources are never called by tests: `apps/api/internal/fixtures` fakes RSS, Jolpica, f1-circuits and Open-Meteo, with dates relative to today (the suite never expires) and control endpoints to publish a story or simulate an outage. Coverage floors: Go 78% (`scripts/check-go-coverage.sh`), frontend in `vite.config.ts`.
+External sources are never called by tests: `apps/api/internal/fixtures` fakes RSS, Jolpica, f1-circuits and Open-Meteo, with dates relative to today (the suite never expires) and control endpoints to publish a story or simulate an outage. Coverage floors: Go 80% (`scripts/check-go-coverage.sh`), frontend in `vite.config.ts`.
 
 `make check` runs exactly what CI runs.
 

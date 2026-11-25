@@ -13,7 +13,7 @@ import type { ArticleStatusFilter } from "./shared/api/apiClient";
 import type { Article } from "./shared/api/types";
 import { useLocale } from "./shared/i18n/LocaleProvider";
 import { hideMainWindow, isRunningInTauri, onPopoverShown, quitApp } from "./shared/platform/tauriBridge";
-import { useDelayedFlag } from "./shared/ui/Skeleton";
+import { AnimatedHeight } from "./shared/ui/AnimatedHeight";
 import { BackIcon, CheckAllIcon, PowerIcon, RefreshIcon, SettingsIcon } from "./shared/ui/icons";
 
 type ArticleView = {
@@ -36,7 +36,10 @@ export function App() {
   const [statusFilter, setStatusFilter] = useState<ArticleStatusFilter>("unread");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { articlesState, reloadArticles, markArticleRead, markArticleUnread } = useArticles(statusFilter, unreadCount);
-  const showsNewsSkeleton = useDelayedFlag(articlesState.status === "loading");
+  // The header fades when it switches between title and "back", not when the app first appears
+  // over the startup skeleton (it would blink).
+  const [hasNavigated, setHasNavigated] = useState(false);
+  const navigationFade = hasNavigated ? "fade-in" : "";
   const isPopoverEntering = usePopoverEntrance();
 
   // Esc hides the popover, whatever the "close when clicking outside" setting is.
@@ -48,9 +51,14 @@ export function App() {
     return () => window.removeEventListener("keydown", hideOnEscape);
   }, []);
 
+  function showView(nextView: CurrentView) {
+    setHasNavigated(true);
+    setCurrentView(nextView);
+  }
+
   function openArticle(article: Article) {
     const siblingArticles = articlesState.status === "loaded" ? articlesState.articles : [article];
-    setCurrentView({ viewName: "article", article, siblingArticles, direction: "forward" });
+    showView({ viewName: "article", article, siblingArticles, direction: "forward" });
     if (!article.readAt) markArticleRead(article.id).catch(() => undefined);
   }
 
@@ -72,7 +80,7 @@ export function App() {
   }
 
   function goHome() {
-    setCurrentView({ viewName: "home" });
+    showView({ viewName: "home" });
     setIsHomeReturning(true);
   }
 
@@ -87,7 +95,7 @@ export function App() {
   return (
     <div className={`app-shell ${isPopoverEntering ? "app-shell--entering" : ""}`}>
       <header className="app-header">
-        <div key={isHome ? "title" : "back"} className="fade-in">
+        <div key={isHome ? "title" : "back"} className={navigationFade}>
           {isHome ? (
             <h1 className="app-header__title">
               {messages.appTitle}
@@ -105,13 +113,13 @@ export function App() {
           )}
         </div>
         {isHome && (
-          <div className="app-header__actions fade-in">
+          <div className={`app-header__actions ${navigationFade}`}>
             <button type="button" className="icon-button" title={messages.refresh} aria-label={messages.refresh} onClick={refreshArticles} disabled={isRefreshing}>
               <span className={isRefreshing ? "icon-slot spin" : "icon-slot"}>
                 <RefreshIcon />
               </span>
             </button>
-            <button type="button" className="icon-button" title={messages.settings} aria-label={messages.settings} onClick={() => setCurrentView({ viewName: "settings" })}>
+            <button type="button" className="icon-button" title={messages.settings} aria-label={messages.settings} onClick={() => showView({ viewName: "settings" })}>
               <SettingsIcon />
             </button>
             {isRunningInTauri() && (
@@ -129,7 +137,10 @@ export function App() {
       <main className="app-content">
         {/* Home stays mounted while another view is open: coming back keeps scroll and data. */}
         <div className={`app-view ${isHomeReturning ? "view-enter-back" : ""}`} hidden={!isHome} onAnimationEnd={finishHomeReturn}>
-          <RaceWeekendCard onChangeTimeZone={() => setCurrentView({ viewName: "settings" })} />
+          {/* Skeleton → card (and card size changes) glide, so the list below never jumps. */}
+          <AnimatedHeight>
+            <RaceWeekendCard onChangeTimeZone={() => showView({ viewName: "settings" })} />
+          </AnimatedHeight>
 
           <div className="news-toolbar">
             <div className="segmented-control" role="tablist">
@@ -157,7 +168,9 @@ export function App() {
             </button>
           </div>
 
-          {articlesState.status === "loading" && (showsNewsSkeleton ? <NewsListSkeleton label={messages.loadingArticles} /> : <div className="news-pending" />)}
+          {/* Only the first load shows it (later reloads keep the list): no delay, it continues
+              the startup skeleton. */}
+          {articlesState.status === "loading" && <NewsListSkeleton label={messages.loadingArticles} />}
           {articlesState.status === "failed" && <p className="empty-state fade-in">{messages.loadFailed}</p>}
           {articlesState.status === "loaded" && (
             <NewsList

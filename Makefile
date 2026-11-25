@@ -1,4 +1,4 @@
-.PHONY: setup setup-linux dev backend-dev web-dev test test-e2e coverage check lint icons build docker-check docker-bundle-linux install-gnome-extension
+.PHONY: setup setup-linux dev backend-dev web-dev test test-e2e coverage check lint icons measure-memory build docker-check docker-bundle-linux install-gnome-extension
 
 # Toolchains installed by scripts/setup-linux.sh work even if the shell was never reloaded
 # (rustup and mise only update PATH for new shells). mise shims resolve the versions in .mise.toml.
@@ -47,7 +47,7 @@ web-dev: ## UI in the browser against `make backend-dev` (no Rust needed)
 	npm run dev:web
 
 test: ## Fast tests: Go (unit + integration), frontend (unit + component), Rust (if installed)
-	go test ./apps/api/...
+	go test ./apps/api/... ./tools/icon-generator/...
 	npm test
 	@if command -v cargo >/dev/null; then cd apps/desktop/src-tauri && cargo test --quiet; \
 	else echo "cargo not installed, skipping Rust tests"; fi
@@ -70,7 +70,10 @@ lint: ## Formatting, vet, golangci-lint (if installed), ESLint and TypeScript
 	npm run lint
 	npm run typecheck
 
-icons: ## Regenerate tray badges and bundle icons
+measure-memory: ## Memory of the running app per process group (shell, webview, sidecar)
+	./scripts/measure-memory.sh
+
+icons: ## Regenerate the app icon, tray icons and GNOME panel icon (one source: tools/icon-generator)
 	npm run icons --workspace apps/desktop
 
 build: ## Installer for the current platform

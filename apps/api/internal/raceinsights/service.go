@@ -9,11 +9,11 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"sync"
+
 	"time"
 
 	"speed-news/apps/api/internal/domain"
-	"speed-news/apps/api/internal/forecast/openmeteo"
+	"speed-news/apps/api/internal/providers/openmeteo"
 	"speed-news/apps/api/internal/storage/sqlite"
 )
 
@@ -58,7 +58,7 @@ type Service struct {
 	currentTime          func() time.Time
 	// One lock per cache key: concurrent requests wait for a single fetch instead of
 	// hitting a slow API several times.
-	cacheKeyLocks sync.Map
+	cacheKeyLocks keyedMutex
 }
 
 func NewService(store *sqlite.Store, resultsProvider ResultsProvider, circuitFactsProvider CircuitFactsProvider,
@@ -181,9 +181,8 @@ func (partialResult partialResultError) Unwrap() error {
 // fails, a stale entry is better than nothing.
 func cachedFetch[Payload any](ctx context.Context, service *Service, cacheKey string, timeToLive time.Duration,
 	fetchFresh func(context.Context) (Payload, error)) (Payload, error) {
-	keyLock, _ := service.cacheKeyLocks.LoadOrStore(cacheKey, &sync.Mutex{})
-	keyLock.(*sync.Mutex).Lock()
-	defer keyLock.(*sync.Mutex).Unlock()
+	unlockCacheKey := service.cacheKeyLocks.lock(cacheKey)
+	defer unlockCacheKey()
 
 	var cachedValue Payload
 	cachedJSON, fetchedAt, isCached, err := service.store.LoadCachedPayload(ctx, cacheKey)

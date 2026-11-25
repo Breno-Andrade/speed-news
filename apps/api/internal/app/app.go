@@ -6,23 +6,25 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
 	"net/http"
 	"time"
 
-	"speed-news/apps/api/internal/calendar/jolpica"
-	"speed-news/apps/api/internal/circuits"
 	"speed-news/apps/api/internal/domain"
-	"speed-news/apps/api/internal/forecast/openmeteo"
 	"speed-news/apps/api/internal/httpapi"
-	"speed-news/apps/api/internal/ingestion/enrichment/shareimage"
-	"speed-news/apps/api/internal/ingestion/fetchers/rss"
-	"speed-news/apps/api/internal/ingestion/scheduler"
+	"speed-news/apps/api/internal/jobs"
 	"speed-news/apps/api/internal/news"
 	"speed-news/apps/api/internal/notifier"
+	"speed-news/apps/api/internal/providers/f1circuits"
+	"speed-news/apps/api/internal/providers/jolpica"
+	"speed-news/apps/api/internal/providers/ogimage"
+	"speed-news/apps/api/internal/providers/openmeteo"
+	"speed-news/apps/api/internal/providers/rss"
 	"speed-news/apps/api/internal/raceinsights"
 	"speed-news/apps/api/internal/raceweekend"
+	"speed-news/apps/api/internal/shellbridge"
 	"speed-news/apps/api/internal/sources"
 	"speed-news/apps/api/internal/storage/sqlite"
 )
@@ -42,6 +44,9 @@ type Config struct {
 	OpenMeteoBaseURL string
 	HTTPTimeout      time.Duration
 	Logger           *slog.Logger
+	// TrayStateOutput receives the tray state lines for the desktop shell (stdout in sidecar
+	// mode, see shellbridge). Nil disables them (browser development, tests, E2E).
+	TrayStateOutput io.Writer
 }
 
 // App is a fully wired backend, already listening.
@@ -50,8 +55,11 @@ type App struct {
 	store       *sqlite.Store
 	listener    net.Listener
 	httpServer  *http.Server
-	scheduler   *scheduler.Scheduler
+	scheduler   *jobs.Scheduler
 	newsSources []domain.NewsSource
+	newsService *news.Service
+	// trayStateReporter is nil when Config.TrayStateOutput is nil.
+	trayStateReporter *shellbridge.TrayStateReporter
 }
 
 // New opens the database, wires every service and binds the listener (so Port is known before Run).
@@ -67,16 +75,21 @@ func New(config Config) (*App, error) {
 		return nil, err
 	}
 
-	httpClient := &http.Client{Timeout: config.HTTPTimeout}
+	httpClient := newHTTPClient(config.HTTPTimeout)
 	broadcaster := notifier.NewBroadcaster()
 	newsService := news.NewService(store, rss.NewFetcher(httpClient), newsSources, broadcaster, config.Logger).
-		WithShareImageFinder(shareimage.NewFinder(httpClient, rss.UserAgent))
+		WithShareImageFinder(ogimage.NewFinder(httpClient, rss.UserAgent))
 	jolpicaClient := jolpica.NewClient(httpClient, config.JolpicaBaseURL, rss.UserAgent)
-	circuitsClient := circuits.NewClient(httpClient, config.CircuitsBaseURL, rss.UserAgent)
+	circuitsClient := f1circuits.NewClient(httpClient, config.CircuitsBaseURL, rss.UserAgent)
 	raceWeekendService := raceweekend.NewService(store, jolpicaClient, circuitsClient, config.Logger)
 	raceInsightsService := raceinsights.NewService(store, jolpicaClient, circuitsClient,
 		openmeteo.NewClient(httpClient, config.OpenMeteoBaseURL, rss.UserAgent), raceWeekendService, config.Logger)
-	jobScheduler := scheduler.NewScheduler(newsService, raceWeekendService, raceInsightsService, config.Logger)
+	jobScheduler := jobs.NewScheduler(newsService, raceWeekendService, raceInsightsService, config.Logger).
+		WithAfterNewsRefresh(newResourceReleaser(store, httpClient, config.Logger).releaseAfterRefresh)
+	var trayStateReporter *shellbridge.TrayStateReporter
+	if config.TrayStateOutput != nil {
+		trayStateReporter = shellbridge.NewTrayStateReporter(broadcaster, store, config.TrayStateOutput, config.Logger)
+	}
 
 	apiHandler := httpapi.NewHandler(httpapi.Dependencies{
 		NewsService:        newsService,
@@ -103,6 +116,9 @@ func New(config Config) (*App, error) {
 		httpServer:  &http.Server{Handler: apiHandler, ReadHeaderTimeout: 10 * time.Second},
 		scheduler:   jobScheduler,
 		newsSources: newsSources,
+		newsService: newsService,
+
+		trayStateReporter: trayStateReporter,
 	}, nil
 }
 
@@ -114,7 +130,7 @@ func applyDefaults(config *Config) {
 		config.JolpicaBaseURL = jolpica.DefaultBaseURL
 	}
 	if config.CircuitsBaseURL == "" {
-		config.CircuitsBaseURL = circuits.DefaultBaseURL
+		config.CircuitsBaseURL = f1circuits.DefaultBaseURL
 	}
 	if config.OpenMeteoBaseURL == "" {
 		config.OpenMeteoBaseURL = openmeteo.DefaultBaseURL
@@ -151,6 +167,12 @@ func (application *App) Run(ctx context.Context) error {
 	serverErrors := make(chan error, 1)
 	go func() { serverErrors <- application.httpServer.Serve(application.listener) }()
 	go application.scheduler.Run(ctx)
+	if application.trayStateReporter != nil {
+		go application.trayStateReporter.Run(ctx)
+	}
+	// The stored count reaches the tray (and early SSE clients) right away, not only after the
+	// first refresh, which can take the whole HTTP timeout when a source is down.
+	application.newsService.PublishUnreadCount(ctx)
 
 	select {
 	case <-ctx.Done():

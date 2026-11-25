@@ -5,7 +5,6 @@ import { describeTimeZone, formatCountdown, formatTimeOfDay, groupSessionsByDay 
 import { useSettings } from "../settings/SettingsProvider";
 import { CircuitMap } from "./CircuitMap";
 import { AnimatedHeight } from "../../shared/ui/AnimatedHeight";
-import { useDelayedFlag } from "../../shared/ui/Skeleton";
 import { CircuitPanel, ForecastPanel, LastRacePanel } from "./InsightPanels";
 import { RaceCardSkeleton } from "./RaceCardSkeletons";
 import { classifySessions, estimatedEndsAt, type SessionStatus } from "./sessionStatus";
@@ -19,13 +18,15 @@ export function RaceWeekendCard({ onChangeTimeZone }: { onChangeTimeZone: () => 
   const raceWeekendState = useRaceWeekend();
   const currentInstant = useCurrentInstant();
   const [selectedTab, setSelectedTab] = useState<RaceCardTab>("schedule");
-  const showsSkeleton = useDelayedFlag(raceWeekendState.status === "loading");
-
+  // The first panel replaces the skeleton in place (soft entrance); tab switches fade in.
+  const [hasSwitchedTab, setHasSwitchedTab] = useState(false);
+  // Only the first load ever shows this (refreshes keep the card): the startup skeleton is
+  // already on screen, so it stays, without the usual delay, until the card replaces it.
   if (raceWeekendState.status === "loading") {
-    return showsSkeleton ? <RaceCardSkeleton label={messages.loadingPanel} /> : <div className="race-card-pending" />;
+    return <RaceCardSkeleton label={messages.loadingPanel} />;
   }
   if (raceWeekendState.status === "failed" || !raceWeekendState.raceWeekend) {
-    return <section className="race-card race-card--empty fade-in">{messages.noUpcomingRace}</section>;
+    return <section className="race-card race-card--empty content-enter">{messages.noUpcomingRace}</section>;
   }
 
   const { raceEvent, circuitLayout, isRaceWeekendNow } = raceWeekendState.raceWeekend;
@@ -38,7 +39,7 @@ export function RaceWeekendCard({ onChangeTimeZone }: { onChangeTimeZone: () => 
   const showsLocalTimes = selectedTab === "schedule" || selectedTab === "weather";
 
   return (
-    <section className={`race-card fade-in ${isRaceWeekendNow ? "race-card--weekend" : ""}`}>
+    <section className={`race-card content-enter ${isRaceWeekendNow ? "race-card--weekend" : ""}`}>
       <header className="race-card__header">
         <div>
           <p className="race-card__eyebrow">
@@ -60,7 +61,10 @@ export function RaceWeekendCard({ onChangeTimeZone }: { onChangeTimeZone: () => 
             role="tab"
             aria-selected={selectedTab === raceCardTab}
             className="race-card__tab"
-            onClick={() => setSelectedTab(raceCardTab)}
+            onClick={() => {
+              setHasSwitchedTab(true);
+              setSelectedTab(raceCardTab);
+            }}
           >
             {tabLabels[raceCardTab]}
           </button>
@@ -71,7 +75,7 @@ export function RaceWeekendCard({ onChangeTimeZone }: { onChangeTimeZone: () => 
           glides to the new size instead of jumping. */}
       <AnimatedHeight>
         {/* key restarts the fade on every tab change */}
-        <div role="tabpanel" key={selectedTab} className="fade-in">
+        <div role="tabpanel" key={selectedTab} className={hasSwitchedTab ? "fade-in" : "content-enter"}>
           {selectedTab === "schedule" && <SessionSchedule raceEvent={raceEvent} currentInstant={currentInstant} />}
           {selectedTab === "lastRace" && <LastRacePanel />}
           {selectedTab === "circuit" && <CircuitPanel />}

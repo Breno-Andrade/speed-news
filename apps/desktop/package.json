@@ -14,10 +14,11 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "build:sidecar": "node scripts/build-sidecar.mjs",
+    "generate:startup-skeleton": "node scripts/generate-startup-skeleton.mjs",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
-    "icons": "go run ../../tools/icon-generator --output-dir src-tauri/icons && tauri icon src-tauri/icons/app-icon.png"
+    "icons": "go run ../../tools/icon-generator --output-dir src-tauri/icons --gnome-icon gnome-shell-extension/icons/speed-news-flag.svg && tauri icon src-tauri/icons/app-icon.png"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.5.0",

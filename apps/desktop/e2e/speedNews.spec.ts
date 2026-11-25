@@ -123,3 +123,39 @@ test("nothing overflows the popover width", async ({ page }) => {
     expect(horizontalOverflow, `tab ${tabName}`).toBeLessThanOrEqual(0);
   }
 });
+
+// The popover webview is created on every first open: it must go skeleton → content without a
+// blank screen and without the filters jumping down as the race card arrives (regression).
+test("first paint is the app skeleton, and the content replaces it in place", async ({ browser, page }) => {
+  // Before any script runs (index.html alone): the skeleton is already the app's layout.
+  const scriptlessContext = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 380, height: 640 } });
+  const scriptlessPage = await scriptlessContext.newPage();
+  await scriptlessPage.goto("/");
+  await expect(scriptlessPage.locator(".race-card[aria-busy='true']")).toBeVisible();
+  const staticToolbarTop = await scriptlessPage.locator(".news-toolbar").evaluate((toolbar) => toolbar.getBoundingClientRect().top);
+  await scriptlessContext.close();
+
+  // With the backend answers held back, the app keeps showing the skeleton…
+  let releaseBackend: () => void = () => undefined;
+  const backendReleased = new Promise<void>((resolveRelease) => {
+    releaseBackend = resolveRelease;
+  });
+  await page.route(/\/(race-weekend\/current|articles\?)/, async (route) => {
+    await backendReleased;
+    await route.continue();
+  });
+  await page.goto("/");
+  await expect(page.locator(".race-card[aria-busy='true']")).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Não lidas" })).toBeVisible();
+  const skeletonToolbarTop = await page.locator(".news-toolbar").evaluate((toolbar) => toolbar.getBoundingClientRect().top);
+
+  // …and once they arrive, the content takes the skeleton's place.
+  releaseBackend();
+  await expect(page.getByRole("heading", { name: "GP de Singapura" })).toBeVisible();
+  await expect(page.locator(".news-item").first()).toBeVisible();
+  await page.waitForTimeout(400); // card height transition
+  const contentToolbarTop = await page.locator(".news-toolbar").evaluate((toolbar) => toolbar.getBoundingClientRect().top);
+
+  expect(Math.abs(skeletonToolbarTop - staticToolbarTop)).toBeLessThanOrEqual(2);
+  expect(Math.abs(contentToolbarTop - skeletonToolbarTop)).toBeLessThanOrEqual(2);
+});

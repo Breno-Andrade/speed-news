@@ -17,7 +17,6 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = ["tray-icon", "image-png"] }
 tauri-plugin-shell = "2"
 tauri-plugin-opener = "2"
-tauri-plugin-positioner = { version = "2", features = ["tray-icon"] }
 serde = { version = "1", features = ["derive"] }
 # Needed by tauri::generate_context! to embed the plugin configuration (updater).
 serde_json = "1"
@@ -35,3 +34,9 @@ tray-icon = { version = "0.25", default-features = false, features = ["ksni"] }
 zbus = { version = "5", default-features = false, features = ["async-io", "blocking-api"] }
 # Same GTK build Tauri uses: focus the popover once it is mapped (see tray::focus_when_mapped).
 gtk = "0.18"
+
+# Windows: taskbar theme (light/dark tray symbol) and the user's locale (tray texts before the
+# popover ever ran). Both already in the dependency tree through Tauri.
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-registry = "0.6"
+windows-sys = { version = "0.61", features = ["Win32_Globalization"] }

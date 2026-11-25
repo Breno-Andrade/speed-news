@@ -11,7 +11,6 @@ import (
 	"github.com/mmcdole/gofeed"
 
 	"speed-news/apps/api/internal/domain"
-	"speed-news/apps/api/internal/ingestion/pipeline"
 	"speed-news/apps/api/internal/notifier"
 	"speed-news/apps/api/internal/storage/sqlite"
 )
@@ -91,7 +90,7 @@ func (service *Service) refreshSource(ctx context.Context, newsSource domain.New
 		service.logger.Warn("fetch source failed", "source", newsSource.Slug, "error", err)
 		return
 	}
-	normalizedArticles := pipeline.NormalizeFeedItems(feedItems, newsSource, fetchedAt)
+	normalizedArticles := NormalizeFeedItems(feedItems, newsSource, fetchedAt)
 	insertedCount, err := service.store.InsertArticles(ctx, normalizedArticles, fetchedAt.Add(-autoReadAge))
 	if err != nil {
 		service.logger.Warn("store articles failed", "source", newsSource.Slug, "error", err)

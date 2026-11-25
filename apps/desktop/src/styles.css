@@ -256,7 +256,22 @@ button {
 }
 
 .news-list__entry {
-  animation: fade-in var(--motion-medium) var(--ease-out) both;
+  animation: content-enter var(--motion-medium) var(--ease-out) both;
+}
+
+/* Content replacing a skeleton in place: starts half visible and does not slide, so there is
+   never a blank frame between the skeleton and what replaces it. */
+.content-enter {
+  animation: content-enter var(--motion-medium) var(--ease-out) both;
+}
+
+@keyframes content-enter {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .fade-in-image {
@@ -333,6 +348,16 @@ button {
   animation: fade-in var(--motion-fast) ease both;
 }
 
+/* Skeletons that continue the startup skeleton (index.html) must not blink while replacing it. */
+.skeleton-group--instant {
+  animation: none;
+}
+
+/* Header icons painted by the startup skeleton, before the buttons exist. */
+.icon-button--placeholder {
+  cursor: default;
+}
+
 .news-item--skeleton {
   cursor: default;
 }
@@ -352,8 +377,21 @@ button {
   gap: 7px;
 }
 
+/* Skeleton geometry follows the real card (header 107 px, tabs, schedule, footer), so the list
+   below does not move when the card replaces it. */
+.race-card__skeleton-map {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
 .race-card__skeleton-tabs {
-  margin: 12px 0 10px;
+  margin: 10px 0 8px;
+}
+
+.race-card__skeleton-footer {
+  margin: 12px 0 2px;
 }
 
 .race-card__skeleton-rows,
@@ -363,7 +401,7 @@ button {
 }
 
 .race-card__skeleton-rows {
-  gap: 12px;
+  gap: 16px;
 }
 
 .race-card__skeleton-day {
@@ -472,15 +510,6 @@ button {
 }
 
 /* Reserve roughly the final height during the short pre-skeleton delay: no layout jump. */
-.race-card-pending {
-  min-height: 300px;
-  margin-bottom: 14px;
-}
-
-.news-pending {
-  min-height: 240px;
-}
-
 .insight-pending {
   min-height: 140px;
 }

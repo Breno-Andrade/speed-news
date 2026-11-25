@@ -15,7 +15,7 @@ env:
   NODE_VERSION: "22.23.5"
   GOLANGCI_LINT_VERSION: "v2.15.0"
   # Coverage floors: CI fails when coverage drops (frontend floors live in vite.config.ts).
-  GO_COVERAGE_FLOOR: "78"
+  GO_COVERAGE_FLOOR: "80"
 
 jobs:
   backend:
@@ -88,11 +88,18 @@ jobs:
           retention-days: 7
 
   desktop-check:
-    name: Desktop shell (Rust) — fmt, clippy, tests
-    runs-on: ubuntu-22.04
+    name: Desktop shell (Rust, ${{ matrix.platform }}) — fmt, clippy, tests
+    # Tray theme, locale and menu bar code is per platform (cfg): compile and test it on each one
+    # in CI instead of finding out in the release workflow.
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [ubuntu-22.04, windows-latest, macos-latest]
+    runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v7
       - name: Tauri system libraries
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
@@ -117,6 +124,7 @@ jobs:
           npm run build:sidecar --workspace apps/desktop
           npm run build --workspace apps/desktop
       - name: rustfmt
+        if: runner.os == 'Linux'
         working-directory: apps/desktop/src-tauri
         run: cargo fmt --check
       - name: Clippy (warnings are errors)

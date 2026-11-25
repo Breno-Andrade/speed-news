@@ -5,8 +5,11 @@ mod autostart;
 mod gnome_extension;
 #[cfg(target_os = "linux")]
 mod panel_bridge;
+mod placement;
+mod popover;
 mod sidecar;
 mod tray;
+mod tray_texts;
 mod updates;
 
 use tauri::{AppHandle, Manager, RunEvent, WindowEvent};
@@ -23,16 +26,16 @@ pub fn run() {
         // running instance's popover instead of starting a second app and sidecar on the same database.
         .plugin(tauri_plugin_single_instance::init(
             |application_handle, _arguments, _working_directory| {
-                tray::show_main_window(application_handle, None);
+                popover::show_popover(application_handle, None);
             },
         ))
         .plugin(tauri_plugin_autostart::Builder::new().build())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_positioner::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(sidecar::SidecarState::default())
-        .manage(tray::PopoverState::default())
+        .manage(popover::PopoverState::default())
+        .manage(tray::TrayModel::default())
         .manage(updates::PendingUpdateState::default());
     #[cfg(target_os = "linux")]
     let application_builder = application_builder.manage(panel_bridge::PanelBridgeState::default());
@@ -40,10 +43,10 @@ pub fn run() {
     let application = application_builder
         .invoke_handler(tauri::generate_handler![
             sidecar::get_api_connection,
-            tray::update_tray,
-            tray::set_close_on_focus_loss,
-            tray::hide_main_window,
+            tray::report_system_locale,
+            popover::hide_main_window,
             updates::install_pending_update,
+            updates::pending_update,
             gnome_extension::gnome_extension_status,
             gnome_extension::install_gnome_extension,
             autostart::is_launch_at_login_enabled,
@@ -68,26 +71,21 @@ pub fn run() {
         })
         .on_window_event(|window, window_event| match window_event {
             // Popover behaviour: clicking anywhere else hides it (unless the user turned it off).
-            WindowEvent::Focused(false) => {
-                let popover_state = window.state::<tray::PopoverState>();
-                if popover_state.closes_on_focus_loss() && window.is_visible().unwrap_or(false) {
-                    popover_state.remember_hidden_by_focus_loss();
-                    let _ = window.hide();
-                }
-            }
-            // Closing only hides; the app keeps running in the tray.
+            WindowEvent::Focused(false) => popover::handle_focus_lost(window),
+            // Closing only hides (and later destroys the webview); the app keeps running in the tray.
             WindowEvent::CloseRequested { api, .. } => {
                 api.prevent_close();
-                let _ = window.hide();
+                popover::hide_popover(window.app_handle());
             }
             _ => {}
         })
         .build(tauri::generate_context!())
         .expect("error while building Speed News");
 
-    application.run(|application_handle, run_event| {
-        if let RunEvent::Exit = run_event {
-            sidecar::stop_sidecar(application_handle);
-        }
+    application.run(|application_handle, run_event| match run_event {
+        // Destroying the hidden popover closes the only window; that must not quit the tray app.
+        RunEvent::ExitRequested { code, api, .. } if popover::should_keep_running(code) => api.prevent_exit(),
+        RunEvent::Exit => sidecar::stop_sidecar(application_handle),
+        _ => {}
     });
 }

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { hideMainWindow, isRunningInTauri, onPopoverShown, openExternalUrl, quitApp, setCloseOnFocusLoss, updateTray } from "./tauriBridge";
+import { hideMainWindow, isRunningInTauri, mirrorUnreadCountInTitle, onPopoverShown, openExternalUrl, quitApp, reportSystemLocale } from "./tauriBridge";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -10,10 +10,10 @@ describe("tauriBridge outside Tauri", () => {
     expect(isRunningInTauri()).toBe(false);
   });
 
-  it("mirrors the unread count in the tab title", async () => {
-    await updateTray({ unreadCount: 4, tooltipText: "", openMenuLabel: "", quitMenuLabel: "" });
+  it("mirrors the unread count in the tab title", () => {
+    mirrorUnreadCountInTitle(4);
     expect(document.title).toBe("(4) Speed News");
-    await updateTray({ unreadCount: 0, tooltipText: "", openMenuLabel: "", quitMenuLabel: "" });
+    mirrorUnreadCountInTitle(0);
     expect(document.title).toBe("Speed News");
   });
 
@@ -26,7 +26,7 @@ describe("tauriBridge outside Tauri", () => {
   it("turns native-only actions into no-ops", async () => {
     await expect(quitApp()).resolves.toBeUndefined();
     await expect(hideMainWindow()).resolves.toBeUndefined();
-    await expect(setCloseOnFocusLoss(false)).resolves.toBeUndefined();
+    await expect(reportSystemLocale("pt-BR")).resolves.toBeUndefined();
     const stopListening = onPopoverShown(() => undefined);
     expect(() => stopListening()).not.toThrow();
   });

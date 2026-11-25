@@ -11,14 +11,15 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use std::thread;
 
-use tauri::{AppHandle, Manager, PhysicalPosition};
+use tauri::{AppHandle, Manager};
 use zbus::blocking::connection::Builder as ConnectionBuilder;
 use zbus::blocking::fdo::DBusProxy;
 use zbus::blocking::Connection;
 use zbus::interface;
 use zbus::message::Header;
 
-use crate::tray;
+use crate::placement::ScreenRect;
+use crate::{popover, tray};
 
 pub const BUS_NAME: &str = "dev.speednews.Desktop";
 pub const OBJECT_PATH: &str = "/dev/speednews/Desktop";
@@ -37,18 +38,12 @@ impl PanelBridge {
     /// (GNOME's focus-stealing prevention does not focus a window shown from a D-Bus call; without
     /// focus, "close when clicking outside" never triggers.)
     fn toggle_window(&self, anchor_x: i32, anchor_y: i32) -> bool {
-        tray::toggle_main_window(
-            &self.application_handle,
-            Some(PhysicalPosition::new(anchor_x, anchor_y)),
-        )
+        popover::toggle_popover(&self.application_handle, Some(ScreenRect::point(anchor_x, anchor_y)))
     }
 
     /// "Open" in the panel button menu.
     fn show_window(&self, anchor_x: i32, anchor_y: i32) {
-        tray::show_main_window(
-            &self.application_handle,
-            Some(PhysicalPosition::new(anchor_x, anchor_y)),
-        );
+        popover::show_popover(&self.application_handle, Some(ScreenRect::point(anchor_x, anchor_y)));
     }
 
     fn quit(&self) {

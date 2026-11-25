@@ -36,7 +36,7 @@ export function NewsList({ articles, emptyMessage, onOpenArticle }: NewsListProp
                   {article.languageCode !== locale.slice(0, 2) && <span className="news-item__language">{article.languageCode.toUpperCase()}</span>}
                 </span>
               </span>
-              {article.imageUrl && <FadeInImage className="news-item__thumbnail" src={article.imageUrl} alt="" loading="lazy" referrerPolicy="no-referrer" />}
+              {article.imageUrl && <FadeInImage className="news-item__thumbnail" src={article.imageUrl} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" />}
             </button>
           </li>
         );

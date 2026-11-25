@@ -1,4 +1,4 @@
-package shareimage
+package ogimage
 
 import (
 	"context"

@@ -32,6 +32,11 @@ type runningBackend struct {
 
 func startBackend(test *testing.T, fixtureURL string, dataDirectory string) *runningBackend {
 	test.Helper()
+	return startBackendWithTrayOutput(test, fixtureURL, dataDirectory, nil)
+}
+
+func startBackendWithTrayOutput(test *testing.T, fixtureURL string, dataDirectory string, trayStateOutput io.Writer) *runningBackend {
+	test.Helper()
 	sourcesFile := filepath.Join(dataDirectory, "sources.yaml")
 	if err := os.WriteFile(sourcesFile, []byte(fixtures.SourcesYAML(fixtureURL)), 0o644); err != nil {
 		test.Fatal(err)
@@ -45,6 +50,7 @@ func startBackend(test *testing.T, fixtureURL string, dataDirectory string) *run
 		OpenMeteoBaseURL: fixtureURL + "/openmeteo",
 		HTTPTimeout:      5 * time.Second,
 		Logger:           slog.New(slog.NewTextHandler(io.Discard, nil)),
+		TrayStateOutput:  trayStateOutput,
 	})
 	if err != nil {
 		test.Fatal(err)

@@ -125,7 +125,7 @@ speed-news/
 ├── scripts/                         # setup-linux.sh, check-go-coverage.sh
 ├── .devcontainer/  .github/workflows/  docs/
 ├── Makefile  go.work  package.json  rust-toolchain.toml  .mise.toml  .golangci.yml
-└── CLAUDE.md  README.md  LICENSE (GPL-3.0)
+└── CLAUDE.md  README.md  LICENSE (AGPL-3.0)
 ```
 
 ---
@@ -311,7 +311,7 @@ Adicionar uma fonte de notícias é **só uma entrada em `default_sources.yaml`*
 
 ## 12. Distribuição e atualizações
 
-- **Código público:** github.com/Breno-Andrade/speed-news, licença **GPL-3.0-or-later**, **© 2026 Breno Andrade**. Quem distribuir uma versão (modificada ou não) precisa manter o aviso de copyright, a licença GPL e o código aberto. Por isso a GPL foi mantida em vez de MIT: com MIT, alguém poderia transformar o app num produto fechado.
+- **Código público:** github.com/Breno-Andrade/speed-news, licença **AGPL-3.0-or-later**, **© 2026 Breno Andrade**. Quem distribuir uma versão (modificada ou não) precisa manter o aviso de copyright, a licença AGPL e o código aberto; quem modificar e oferecer o software pela rede (por exemplo, hospedar o backend como serviço) também precisa liberar o código aos usuários. Por isso o copyleft foi mantido em vez de MIT: com MIT, alguém poderia transformar o app num produto fechado.
 - **Instaladores**, de graça no GitHub Releases:
   - **AppImage** (recomendado no Linux), `.deb` e `.rpm`;
   - `.exe` e `.msi` no Windows;
@@ -348,7 +348,7 @@ Adicionar uma fonte de notícias é **só uma entrada em `default_sources.yaml`*
 | **Extensão própria do GNOME** | o AppIndicator do Ubuntu abre o menu no clique simples e não tem opção para mudar |
 | **Bolinha vermelha** no ícone (Linux/Windows) | o `ksni` não exibe texto; o número fica no botão do GNOME, no cabeçalho e no tooltip |
 | **AppImage como download principal no Linux** | é o único formato do Linux que se atualiza sem senha |
-| **Repositório público + GPL-3.0** | CI ilimitada e assinatura gratuita no Windows (SignPath); derivados continuam livres |
+| **Repositório público + AGPL-3.0** | CI ilimitada e assinatura gratuita no Windows (SignPath); derivados continuam livres, inclusive se alguém hospedar o backend como serviço |
 | **Fixtures com datas relativas** | testes determinísticos que não vencem com a temporada |
 | **Fusos agrupados por país** | as pessoas conhecem o país, não o identificador IANA nem o GMT |
 

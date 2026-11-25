@@ -134,6 +134,12 @@ function GeneralGroup({ onSave }: { onSave: SaveSettings }) {
         isOn={userSettings.closeOnFocusLoss}
         onToggle={(isOn) => onSave({ closeOnFocusLoss: isOn })}
       />
+      <ToggleRow
+        label={messages.showUnreadIndicator}
+        description={messages.showUnreadIndicatorHint}
+        isOn={userSettings.showUnreadIndicator}
+        onToggle={(isOn) => onSave({ showUnreadIndicator: isOn })}
+      />
       <LaunchAtLoginRow />
       <GnomeExtensionRow />
     </SettingsGroup>

@@ -55,6 +55,17 @@ describe("SettingsPanel", () => {
     expect(await screen.findByRole("status")).toHaveTextContent("Salvo");
   });
 
+  it("saves the 'show new stories on the icon' choice", async () => {
+    const userInteraction = userEvent.setup();
+    const { fakeApiClient } = renderWithProviders(<SettingsPanel />);
+
+    const indicatorSwitch = await screen.findByRole("switch", { name: /Indicar notícias novas no ícone/ });
+    await waitFor(() => expect(indicatorSwitch).toBeChecked());
+    await userInteraction.click(indicatorSwitch);
+    expect(fakeApiClient.saveSettings).toHaveBeenLastCalledWith(expect.objectContaining({ showUnreadIndicator: false }));
+    expect(indicatorSwitch).not.toBeChecked();
+  });
+
   it("reverts the optimistic change and tells the user when saving fails", async () => {
     const userInteraction = userEvent.setup();
     const fakeApiClient = createFakeApiClient();
@@ -141,8 +152,8 @@ describe("SettingsPanel", () => {
     const aboutGroup = await screen.findByRole("region", { name: "Sobre" });
 
     expect(within(aboutGroup).getByText("desenvolvimento")).toBeInTheDocument(); // no app version in the browser
-    // GPL §5: interactive programs show the copyright and the license to the user.
-    expect(within(aboutGroup).getByText(/© 2026 Breno Andrade · software livre, licença GPL-3.0/)).toBeInTheDocument();
+    // AGPL §5: interactive programs show the copyright and the license to the user.
+    expect(within(aboutGroup).getByText(/© 2026 Breno Andrade · software livre, licença AGPL-3.0/)).toBeInTheDocument();
     expect(screen.getByText(/sem vínculo com a Fórmula 1/)).toBeInTheDocument();
 
     await userInteraction.click(within(aboutGroup).getByText("Fontes de dados"));

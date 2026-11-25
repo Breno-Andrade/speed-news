@@ -7,6 +7,7 @@
 //! - Silent upgrade: when an app update brings a newer extension, the installed copy is replaced
 //!   (it takes effect at the next shell reload; the D-Bus interface stays backward compatible).
 
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -161,24 +162,61 @@ pub fn install_gnome_extension(application_handle: AppHandle) -> Result<GnomeExt
     Ok(gnome_extension_status(application_handle))
 }
 
-/// Called at startup: replace an installed extension older than the bundled one.
+/// Every file of an extension directory (relative path → bytes), to compare two copies.
+fn read_directory_contents(extension_directory: &Path) -> BTreeMap<PathBuf, Vec<u8>> {
+    fn collect_files(root_directory: &Path, current_directory: &Path, file_contents: &mut BTreeMap<PathBuf, Vec<u8>>) {
+        let Ok(directory_entries) = fs::read_dir(current_directory) else {
+            return;
+        };
+        for directory_entry in directory_entries.flatten() {
+            let entry_path = directory_entry.path();
+            if entry_path.is_dir() {
+                collect_files(root_directory, &entry_path, file_contents);
+            } else if let (Ok(relative_path), Ok(file_bytes)) =
+                (entry_path.strip_prefix(root_directory), fs::read(&entry_path))
+            {
+                file_contents.insert(relative_path.to_path_buf(), file_bytes);
+            }
+        }
+    }
+    let mut file_contents = BTreeMap::new();
+    collect_files(extension_directory, extension_directory, &mut file_contents);
+    file_contents
+}
+
+/// Replaces the installed extension when the bundled one is newer, or has the same version but
+/// different files (a stale copy from a build that forgot to bump "version": without this, an old
+/// extension.js could stay installed forever, e.g. one that never focuses the popover, so
+/// "close when clicking outside" never fires). Never downgrades. Returns whether it copied.
+fn upgrade_extension_directory(bundled_directory: &Path, installed_directory: &Path) -> bool {
+    let (Some(bundled_version), Some(installed_version)) = (
+        read_extension_version(bundled_directory),
+        read_extension_version(installed_directory),
+    ) else {
+        return false; // not installed (the user decides) or unreadable
+    };
+    let needs_upgrade = bundled_version > installed_version
+        || (bundled_version == installed_version
+            && read_directory_contents(bundled_directory) != read_directory_contents(installed_directory));
+    if !needs_upgrade {
+        return false;
+    }
+    match copy_directory(bundled_directory, installed_directory) {
+        Ok(()) => true,
+        Err(copy_error) => {
+            eprintln!("[gnome-extension] upgrade failed: {copy_error}");
+            false
+        }
+    }
+}
+
+/// Called at startup: refresh an installed extension that differs from the bundled one.
 pub fn upgrade_installed_extension(application_handle: &AppHandle) {
-    let (Some(bundled_directory), Some(installed_directory)) = (
+    if let (Some(bundled_directory), Some(installed_directory)) = (
         bundled_extension_directory(application_handle),
         installed_extension_directory(application_handle),
-    ) else {
-        return;
-    };
-    let (Some(bundled_version), Some(installed_version)) = (
-        read_extension_version(&bundled_directory),
-        read_extension_version(&installed_directory),
-    ) else {
-        return; // not installed (the user decides) or unreadable
-    };
-    if bundled_version > installed_version {
-        if let Err(copy_error) = copy_directory(&bundled_directory, &installed_directory) {
-            eprintln!("[gnome-extension] upgrade failed: {copy_error}");
-        }
+    ) {
+        upgrade_extension_directory(&bundled_directory, &installed_directory);
     }
 }
 
@@ -229,5 +267,98 @@ mod tests {
         assert!(target_directory.join("icons").join("flag.svg").is_file());
         assert_eq!(read_extension_version(&scratch_directory.join("missing")), None);
         let _ = fs::remove_dir_all(&scratch_directory);
+    }
+
+    /// Writes an extension directory with the given metadata version and extension.js body.
+    fn write_extension(extension_directory: &Path, version: u64, script_body: &str) {
+        fs::create_dir_all(extension_directory).unwrap();
+        fs::write(
+            extension_directory.join("metadata.json"),
+            format!(r#"{{"uuid": "speed-news@speednews.dev", "version": {version}}}"#),
+        )
+        .unwrap();
+        fs::write(extension_directory.join("extension.js"), script_body).unwrap();
+    }
+
+    fn installed_script(extension_directory: &Path) -> String {
+        fs::read_to_string(extension_directory.join("extension.js")).unwrap()
+    }
+
+    fn scratch_directory(test_name: &str) -> PathBuf {
+        let scratch_directory =
+            std::env::temp_dir().join(format!("speed-news-upgrade-{test_name}-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&scratch_directory);
+        scratch_directory
+    }
+
+    /// Regression: an old extension.js (without the code that focuses the popover) stayed installed
+    /// because the bundled copy kept the same metadata version, so clicking outside the popover
+    /// right after opening it never closed it.
+    #[test]
+    fn a_stale_copy_with_the_same_version_is_replaced() {
+        let scratch_directory = scratch_directory("stale");
+        let bundled_directory = scratch_directory.join("bundled");
+        let installed_directory = scratch_directory.join("installed");
+        write_extension(&bundled_directory, 1, "toggle(); focusAppWindowWhenShown();");
+        write_extension(&installed_directory, 1, "toggle();");
+
+        assert!(upgrade_extension_directory(&bundled_directory, &installed_directory));
+        assert_eq!(
+            installed_script(&installed_directory),
+            "toggle(); focusAppWindowWhenShown();"
+        );
+        // Identical copies are left alone.
+        assert!(!upgrade_extension_directory(&bundled_directory, &installed_directory));
+        let _ = fs::remove_dir_all(&scratch_directory);
+    }
+
+    #[test]
+    fn a_newer_bundled_version_replaces_the_installed_one() {
+        let scratch_directory = scratch_directory("newer");
+        let bundled_directory = scratch_directory.join("bundled");
+        let installed_directory = scratch_directory.join("installed");
+        write_extension(&bundled_directory, 2, "new");
+        write_extension(&installed_directory, 1, "old");
+
+        assert!(upgrade_extension_directory(&bundled_directory, &installed_directory));
+        assert_eq!(read_extension_version(&installed_directory), Some(2));
+        let _ = fs::remove_dir_all(&scratch_directory);
+    }
+
+    #[test]
+    fn a_newer_installed_extension_is_never_downgraded() {
+        let scratch_directory = scratch_directory("downgrade");
+        let bundled_directory = scratch_directory.join("bundled");
+        let installed_directory = scratch_directory.join("installed");
+        write_extension(&bundled_directory, 1, "old");
+        write_extension(&installed_directory, 2, "new");
+
+        assert!(!upgrade_extension_directory(&bundled_directory, &installed_directory));
+        assert_eq!(installed_script(&installed_directory), "new");
+        let _ = fs::remove_dir_all(&scratch_directory);
+    }
+
+    #[test]
+    fn an_extension_that_is_not_installed_is_not_installed_silently() {
+        let scratch_directory = scratch_directory("missing");
+        let bundled_directory = scratch_directory.join("bundled");
+        write_extension(&bundled_directory, 1, "script");
+
+        assert!(!upgrade_extension_directory(
+            &bundled_directory,
+            &scratch_directory.join("installed")
+        ));
+        assert!(!scratch_directory.join("installed").exists());
+        let _ = fs::remove_dir_all(&scratch_directory);
+    }
+
+    /// The bundled extension must keep focusing the popover after opening it: GNOME does not focus
+    /// a window shown from a D-Bus call, and an unfocused window never reports focus loss.
+    #[test]
+    fn the_bundled_extension_focuses_the_popover_after_opening_it() {
+        let extension_script = include_str!("../../gnome-shell-extension/extension.js");
+        assert!(extension_script.contains("if (isVisible) this._focusAppWindowWhenShown()"));
+        assert!(extension_script.contains("Main.activateWindow(appWindow)"));
+        assert!(extension_script.contains(r#"<arg type="b" name="is_visible" direction="out"/>"#));
     }
 }

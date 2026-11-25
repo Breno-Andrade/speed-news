@@ -144,10 +144,55 @@ pub fn show_main_window(application_handle: &AppHandle, anchor: Option<PhysicalP
         Some(anchor_position) => position_below_anchor(&main_window, anchor_position),
         None => position_near_tray(&main_window),
     }
-    let _ = main_window.show();
-    let _ = main_window.set_focus();
+    show_and_focus(&main_window);
     // The UI plays its entrance animation on this event.
     let _ = main_window.emit("popover-shown", ());
+}
+
+/// A popover that never gets keyboard focus never loses it, so "close when clicking outside"
+/// would not fire until the user clicked inside it.
+///
+/// Linux: `show()` + `set_focus()` does not focus. tao queues `show()` to the GTK thread and
+/// `set_focus()` only acts when the window is already visible, which it is not yet (we run on
+/// the tray/D-Bus thread), so it is a silent no-op. Presenting right after `show_all()` is not
+/// enough either: GTK flags the window as mapped at once, but the window manager has not managed
+/// it yet and ignores the request. So, on the GTK thread, show it ourselves and present it on the
+/// X map event, when the window manager has really put it on screen.
+#[cfg(target_os = "linux")]
+fn show_and_focus(main_window: &tauri::WebviewWindow) {
+    use gtk::prelude::*;
+    use std::cell::Cell;
+    use std::rc::Rc;
+
+    let shown_window = main_window.clone();
+    let _ = main_window.run_on_main_thread(move || {
+        let Ok(gtk_window) = shown_window.gtk_window() else {
+            let _ = shown_window.show();
+            return;
+        };
+        if gtk_window.is_visible() {
+            gtk_window.present_with_time(gtk::gdk::ffi::GDK_CURRENT_TIME as u32);
+            return;
+        }
+        // Connected before showing, so the map event cannot be missed. One-shot.
+        let map_handler_slot = Rc::new(Cell::new(None));
+        let handler_slot_in_callback = map_handler_slot.clone();
+        let map_handler_id = gtk_window.connect_map_event(move |mapped_window, _map_event| {
+            mapped_window.present_with_time(gtk::gdk::ffi::GDK_CURRENT_TIME as u32);
+            if let Some(handler_id) = handler_slot_in_callback.take() {
+                mapped_window.disconnect(handler_id);
+            }
+            gtk::glib::Propagation::Proceed
+        });
+        map_handler_slot.set(Some(map_handler_id));
+        gtk_window.show_all();
+    });
+}
+
+#[cfg(not(target_os = "linux"))]
+fn show_and_focus(main_window: &tauri::WebviewWindow) {
+    let _ = main_window.show();
+    let _ = main_window.set_focus();
 }
 
 /// Called by the UI with the "close when clicking outside" setting.

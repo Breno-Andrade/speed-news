@@ -4,5 +4,5 @@
   "description": "Panel button for the Speed News desktop app: one click opens the F1 news, with the unread count next to the icon.",
   "shell-version": ["45", "46", "47", "48", "49", "50"],
   "url": "https://github.com/",
-  "version": 1
+  "version": 2
 }

@@ -118,6 +118,8 @@ export type UserSettings = {
   newsLanguageCodes: string[];
   /** Hide the popover when clicking anywhere else. */
   closeOnFocusLoss: boolean;
+  /** Show the unread count (or dot) next to the tray icon / panel button. */
+  showUnreadIndicator: boolean;
 };
 
 export type NewsSource = {

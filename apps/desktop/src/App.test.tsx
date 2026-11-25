@@ -31,6 +31,17 @@ describe("App", () => {
     expect(document.title).toBe("(3) Speed News");
   });
 
+  it("keeps the count off the tray icon when the indicator is turned off, but still shows it inside", async () => {
+    const { fakeApiClient } = renderWithProviders(<App />, createFakeApiClient({ articles, settings: { showUnreadIndicator: false } }));
+    await screen.findByText("Verstappen vence em Las Vegas");
+    await waitFor(() => expect(fakeApiClient.fetchSettings).toHaveBeenCalled());
+
+    emitUnreadCount(fakeApiClient, 3);
+    expect(await screen.findByText("3", { selector: ".unread-pill" })).toBeInTheDocument();
+    // In the browser, updateTray mirrors the tray count in the tab title.
+    await waitFor(() => expect(document.title).toBe("Speed News"));
+  });
+
   it("opens an article, marks it read and navigates with previous/next", async () => {
     const userInteraction = userEvent.setup();
     const { fakeApiClient } = renderWithProviders(<App />, createFakeApiClient({ articles }));

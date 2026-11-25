@@ -11,6 +11,7 @@ const defaultUserSettings: UserSettings = {
   interfaceLanguage: "system",
   newsLanguageCodes: [],
   closeOnFocusLoss: true,
+  showUnreadIndicator: true,
 };
 
 type SettingsContextValue = {

@@ -1437,7 +1437,7 @@ button {
   outline-offset: -1px;
 }
 
-.time-zone-picker__offset-heading {
+.time-zone-picker__country-heading {
   position: sticky;
   top: -12px;
   z-index: 1;

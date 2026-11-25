@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createFakeApiClient } from "../../test/fakeApiClient";
 import { renderWithProviders } from "../../test/renderWithProviders";
 import { SettingsPanel } from "./SettingsPanel";
@@ -91,15 +91,36 @@ describe("SettingsPanel", () => {
     expect(await screen.findByRole("button", { name: /Fuso horário/ })).toHaveTextContent("São Paulo");
   });
 
-  it("finds zones by GMT offset and says when nothing matches", async () => {
+  it("groups zones by country, with the computer's country first", async () => {
+    const userInteraction = userEvent.setup();
+    // Pin the "computer" zone: CI machines run in UTC, which belongs to no country.
+    vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockReturnValue({
+      ...new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo" }).resolvedOptions(),
+    });
+    renderWithProviders(<SettingsPanel />);
+    await userInteraction.click(await screen.findByRole("button", { name: /Fuso horário/ }));
+
+    const countryHeadings = screen.getAllByRole("heading", { level: 4 }).map((countryHeading) => countryHeading.textContent);
+    expect(countryHeadings[0]).toBe("Brasil");
+    expect(countryHeadings).toContain("Portugal");
+    vi.restoreAllMocks();
+  });
+
+  it("finds zones by country or GMT offset and says when nothing matches", async () => {
     const userInteraction = userEvent.setup();
     renderWithProviders(<SettingsPanel />);
     await userInteraction.click(await screen.findByRole("button", { name: /Fuso horário/ }));
     const searchBox = screen.getByRole("searchbox");
 
+    await userInteraction.type(searchBox, "portugal");
+    expect(screen.getAllByRole("heading", { level: 4 }).map((countryHeading) => countryHeading.textContent)).toEqual(["Portugal"]);
+    expect(screen.getByRole("button", { name: /^Lisbon/ })).toBeInTheDocument();
+
+    await userInteraction.clear(searchBox);
     await userInteraction.type(searchBox, "gmt-3");
-    expect(screen.getByRole("heading", { name: "GMT−3" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "GMT+1" })).not.toBeInTheDocument();
+    const offsetCountries = screen.getAllByRole("heading", { level: 4 }).map((countryHeading) => countryHeading.textContent);
+    expect(offsetCountries).toContain("Brasil");
+    expect(offsetCountries).not.toContain("Portugal");
 
     await userInteraction.clear(searchBox);
     await userInteraction.type(searchBox, "cidade-que-nao-existe");

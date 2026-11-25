@@ -5,7 +5,7 @@ import { useLocale } from "../../shared/i18n/LocaleProvider";
 import { describeLanguage } from "../../shared/i18n/messages";
 import { getAppVersion, openExternalUrl } from "../../shared/platform/tauriBridge";
 import { listSupportedTimeZones } from "../../shared/time/timeZone";
-import { buildTimeZoneOptions, describeTimeZoneOption, filterTimeZoneOptions, groupByOffset } from "../../shared/time/timeZoneOptions";
+import { buildTimeZoneOptions, describeTimeZoneOption, filterTimeZoneOptions, groupByCountry } from "../../shared/time/timeZoneOptions";
 import { BackIcon, ChevronRightIcon } from "../../shared/ui/icons";
 import { SkeletonBlock, SkeletonGroup, useDelayedFlag } from "../../shared/ui/Skeleton";
 import { useSettings } from "./SettingsProvider";
@@ -295,8 +295,12 @@ function TimeZonePicker({ onSave, onClose }: { onSave: SaveSettings; onClose: ()
   const scrollTargetZone = selectedManualZone ?? systemTimeZone;
   // ~400 zones described once (≈75 ms), not on every keystroke.
   const allTimeZoneOptions = useMemo(() => buildTimeZoneOptions(listSupportedTimeZones(), locale), [locale]);
-  const offsetGroups = useMemo(() => groupByOffset(filterTimeZoneOptions(allTimeZoneOptions, searchQuery)), [allTimeZoneOptions, searchQuery]);
   const systemZone = describeTimeZoneOption(systemTimeZone, locale);
+  // Grouped by country, alphabetically, with the computer's country on top.
+  const countryGroups = useMemo(
+    () => groupByCountry(filterTimeZoneOptions(allTimeZoneOptions, searchQuery), locale, systemZone.countryCode),
+    [allTimeZoneOptions, searchQuery, locale, systemZone.countryCode],
+  );
 
   // Open the list at the current zone instead of at "GMT−11" (Pacific islands).
   useLayoutEffect(() => {
@@ -342,12 +346,12 @@ function TimeZonePicker({ onSave, onClose }: { onSave: SaveSettings; onClose: ()
         <span className="time-zone-option__offset">{systemZone.offsetLabel}</span>
       </button>
 
-      {offsetGroups.length === 0 && <p className="empty-state">{messages.noTimeZoneFound}</p>}
+      {countryGroups.length === 0 && <p className="empty-state">{messages.noTimeZoneFound}</p>}
       <div className="time-zone-picker__list" role="list">
-        {offsetGroups.map((offsetGroup) => (
-          <div key={offsetGroup.offsetLabel} role="listitem">
-            <h4 className="time-zone-picker__offset-heading">{offsetGroup.offsetLabel}</h4>
-            {offsetGroup.timeZoneOptions.map((timeZoneOption) => {
+        {countryGroups.map((countryGroup) => (
+          <div key={countryGroup.countryName} role="listitem">
+            <h4 className="time-zone-picker__country-heading">{countryGroup.countryName}</h4>
+            {countryGroup.timeZoneOptions.map((timeZoneOption) => {
               const isSelected = timeZoneOption.timeZoneId === selectedManualZone;
               return (
                 <button
@@ -360,10 +364,9 @@ function TimeZonePicker({ onSave, onClose }: { onSave: SaveSettings; onClose: ()
                 >
                   <span className="time-zone-option__text">
                     <span className="time-zone-option__city">{timeZoneOption.cityName}</span>
-                    <span className="time-zone-option__detail">
-                      {timeZoneOption.regionName} · {timeZoneOption.genericName}
-                    </span>
+                    <span className="time-zone-option__detail">{timeZoneOption.genericName}</span>
                   </span>
+                  <span className="time-zone-option__offset">{timeZoneOption.offsetLabel}</span>
                   {isSelected && <span className="time-zone-option__check">✓</span>}
                 </button>
               );

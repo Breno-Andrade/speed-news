@@ -5,7 +5,7 @@ import {
   describeTimeZoneOption,
   filterTimeZoneOptions,
   formatOffsetLabel,
-  groupByOffset,
+  groupByCountry,
   parseOffsetMinutes,
 } from "./timeZoneOptions";
 
@@ -70,14 +70,49 @@ describe("search", () => {
   });
 });
 
-describe("ordering and grouping", () => {
-  it("goes west to east and groups by offset", () => {
-    const offsets = allTimeZoneOptions.map((timeZoneOption) => timeZoneOption.offsetMinutes);
-    expect(offsets).toEqual([...offsets].sort((firstOffset, secondOffset) => firstOffset - secondOffset));
+describe("countries", () => {
+  it("knows the country of every zone the browser offers, legacy names included", () => {
+    const zonesWithoutCountry = allTimeZoneOptions.filter((timeZoneOption) => timeZoneOption.countryCode === null);
+    expect(zonesWithoutCountry.map((timeZoneOption) => timeZoneOption.timeZoneId)).toEqual([]);
+    expect(describeTimeZoneOption("Asia/Calcutta", "pt-BR", referenceInstant).countryCode).toBe("IN");
+  });
 
-    const offsetGroups = groupByOffset(allTimeZoneOptions);
-    const brasiliaGroup = offsetGroups.find((offsetGroup) => offsetGroup.offsetLabel === "GMT−3");
-    expect(brasiliaGroup?.timeZoneOptions.map((timeZoneOption) => timeZoneOption.timeZoneId)).toContain("America/Sao_Paulo");
-    expect(new Set(offsetGroups.map((offsetGroup) => offsetGroup.offsetLabel)).size).toBe(offsetGroups.length);
+  it("names countries in the interface language", () => {
+    expect(describeTimeZoneOption("America/Sao_Paulo", "pt-BR", referenceInstant).countryName).toBe("Brasil");
+    expect(describeTimeZoneOption("America/New_York", "pt-BR", referenceInstant).countryName).toBe("Estados Unidos");
+    expect(describeTimeZoneOption("America/New_York", "en", referenceInstant).countryName).toBe("United States");
+  });
+
+  it("finds zones by country name", () => {
+    expect(findCities("brasil")).toEqual(expect.arrayContaining(["America/Sao_Paulo", "America/Manaus", "America/Noronha"]));
+    expect(findCities("portugal").sort()).toEqual(["Atlantic/Azores", "Atlantic/Madeira", "Europe/Lisbon"]);
+  });
+});
+
+describe("grouping by country", () => {
+  const countryGroups = groupByCountry(allTimeZoneOptions, "pt-BR", "BR");
+
+  it("puts the computer's country first, then the rest alphabetically", () => {
+    expect(countryGroups[0]?.countryName).toBe("Brasil");
+    const otherCountryNames = countryGroups.slice(1).map((countryGroup) => countryGroup.countryName);
+    expect(otherCountryNames).toEqual([...otherCountryNames].sort((firstName, secondName) => firstName.localeCompare(secondName, "pt-BR")));
+  });
+
+  it("orders a country's zones west to east", () => {
+    const brazilCities = countryGroups[0]!.timeZoneOptions.map((timeZoneOption) => timeZoneOption.cityName);
+    // Rio Branco (GMT−5) before Manaus (GMT−4) before São Paulo (GMT−3) before Noronha (GMT−2).
+    expect(brazilCities.indexOf("Rio Branco")).toBeLessThan(brazilCities.indexOf("Manaus"));
+    expect(brazilCities.indexOf("Manaus")).toBeLessThan(brazilCities.indexOf("São Paulo"));
+    expect(brazilCities.indexOf("São Paulo")).toBeLessThan(brazilCities.indexOf("Noronha"));
+  });
+
+  it("has one group per country", () => {
+    const countryNames = countryGroups.map((countryGroup) => countryGroup.countryName);
+    expect(new Set(countryNames).size).toBe(countryNames.length);
+  });
+
+  it("works without a preferred country", () => {
+    const alphabeticalGroups = groupByCountry(allTimeZoneOptions, "pt-BR");
+    expect(alphabeticalGroups[0]?.countryName.localeCompare("B", "pt-BR")).toBeLessThan(0);
   });
 });

@@ -1,8 +1,13 @@
 // Turns raw IANA ids ("America/Sao_Paulo") into options people can recognize and search:
-// city, region, the readable zone name ("Horário Padrão de Brasília") and the GMT offset.
+// country, city, the readable zone name ("Horário Padrão de Brasília") and the GMT offset.
+import { countryCodeByTimeZone } from "./timeZoneCountries.generated";
 
 export type TimeZoneOption = {
   timeZoneId: string;
+  /** ISO 3166 code from the tz database; null for zones outside any country. */
+  countryCode: string | null;
+  /** Country name in the interface language ("Brasil", "Estados Unidos"). */
+  countryName: string;
   cityName: string;
   regionName: string;
   genericName: string;
@@ -97,12 +102,27 @@ function readTimeZoneName(timeZoneId: string, locale: string, referenceInstant: 
   );
 }
 
+// Intl.DisplayNames is costly to build: one per locale for the ~400 zones.
+const countryNamesByLocale = new Map<string, Intl.DisplayNames>();
+
+function countryNameFor(countryCode: string, locale: string): string {
+  let countryNames = countryNamesByLocale.get(locale);
+  if (!countryNames) {
+    countryNames = new Intl.DisplayNames([locale], { type: "region" });
+    countryNamesByLocale.set(locale, countryNames);
+  }
+  return countryNames.of(countryCode) ?? countryCode;
+}
+
 export function describeTimeZoneOption(timeZoneId: string, locale: string, referenceInstant = new Date()): TimeZoneOption {
   const offsetMinutes = parseOffsetMinutes(readTimeZoneName(timeZoneId, locale, referenceInstant, "shortOffset"));
   const regionKey = timeZoneId.split("/")[0] ?? "";
   const regionNames = regionNamesByLocale[locale.slice(0, 2)] ?? regionNamesByLocale.en!;
   const cityName = cityNameFromZoneId(timeZoneId);
   const regionName = regionNames[regionKey] ?? regionKey;
+  const countryCode = countryCodeByTimeZone[timeZoneId] ?? null;
+  // Zones outside any country (none in practice today) fall back to their region.
+  const countryName = countryCode ? countryNameFor(countryCode, locale) : regionName;
   const genericName = readTimeZoneName(timeZoneId, locale, referenceInstant, "longGeneric");
   const offsetLabel = formatOffsetLabel(offsetMinutes);
 
@@ -111,12 +131,14 @@ export function describeTimeZoneOption(timeZoneId: string, locale: string, refer
   const offsetVariants = plainOffset ? `${plainOffset} gmt${plainOffset} utc${plainOffset}` : "gmt utc +0 gmt+0 utc+0";
   return {
     timeZoneId,
+    countryCode,
+    countryName,
     cityName,
     regionName,
     genericName,
     offsetMinutes,
     offsetLabel,
-    searchText: normalizeForSearch(`${cityName} ${timeZoneId} ${regionName} ${genericName} ${offsetVariants}`),
+    searchText: normalizeForSearch(`${countryName} ${cityName} ${timeZoneId} ${regionName} ${genericName} ${offsetVariants}`),
   };
 }
 
@@ -134,15 +156,34 @@ export function filterTimeZoneOptions(timeZoneOptions: TimeZoneOption[], searchQ
   return timeZoneOptions.filter((timeZoneOption) => queryWords.every((queryWord) => timeZoneOption.searchText.includes(queryWord)));
 }
 
-export type TimeZoneOffsetGroup = { offsetLabel: string; timeZoneOptions: TimeZoneOption[] };
+export type TimeZoneCountryGroup = { countryName: string; countryCode: string | null; timeZoneOptions: TimeZoneOption[] };
 
-/** Consecutive options with the same offset, for the "GMT−3" headings of the list. */
-export function groupByOffset(timeZoneOptions: TimeZoneOption[]): TimeZoneOffsetGroup[] {
-  const offsetGroups: TimeZoneOffsetGroup[] = [];
+/**
+ * One group per country, alphabetical in the interface language, with `firstCountryCode`
+ * (the computer's country) on top. Inside a country: west to east, then by city.
+ */
+export function groupByCountry(timeZoneOptions: TimeZoneOption[], locale: string, firstCountryCode: string | null = null): TimeZoneCountryGroup[] {
+  const groupsByCountryName = new Map<string, TimeZoneCountryGroup>();
   for (const timeZoneOption of timeZoneOptions) {
-    const lastGroup = offsetGroups.at(-1);
-    if (lastGroup && lastGroup.offsetLabel === timeZoneOption.offsetLabel) lastGroup.timeZoneOptions.push(timeZoneOption);
-    else offsetGroups.push({ offsetLabel: timeZoneOption.offsetLabel, timeZoneOptions: [timeZoneOption] });
+    const countryGroup = groupsByCountryName.get(timeZoneOption.countryName) ?? {
+      countryName: timeZoneOption.countryName,
+      countryCode: timeZoneOption.countryCode,
+      timeZoneOptions: [],
+    };
+    countryGroup.timeZoneOptions.push(timeZoneOption);
+    groupsByCountryName.set(timeZoneOption.countryName, countryGroup);
   }
-  return offsetGroups;
+  const countryGroups = [...groupsByCountryName.values()];
+  for (const countryGroup of countryGroups) {
+    countryGroup.timeZoneOptions.sort(
+      (firstOption, secondOption) => firstOption.offsetMinutes - secondOption.offsetMinutes || firstOption.cityName.localeCompare(secondOption.cityName, locale),
+    );
+  }
+  return countryGroups.sort((firstGroup, secondGroup) => {
+    if (firstCountryCode && firstGroup.countryCode !== secondGroup.countryCode) {
+      if (firstGroup.countryCode === firstCountryCode) return -1;
+      if (secondGroup.countryCode === firstCountryCode) return 1;
+    }
+    return firstGroup.countryName.localeCompare(secondGroup.countryName, locale);
+  });
 }

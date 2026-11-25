@@ -4,8 +4,25 @@ Tray widget that gathers Formula 1 news and shows the race weekend schedule in y
 
 - **Tray icon shows when there is something new** (red dot on Linux/Windows, count as text on macOS); left click opens the news, right click shows Open/Quit.
 - **Race weekend card**: Grand Prix, circuit drawing and every session grouped by day, in the computer's time zone (or one you pick).
-- **News from 6 sources** (EN + PT) via RSS: headline, summary and a link to read the full article on the source site.
+- **News from 8 sources** (EN + PT) via RSS: headline, summary, cover image and a link to read the full article on the source site.
 - No login; everything is stored locally (SQLite).
+
+## Install
+
+Download from the [latest release](https://github.com/Breno-Andrade/speed-news/releases/latest). Once installed, the app updates itself and starts with the computer (you can turn that off in Settings → General).
+
+### Linux (supported)
+
+- **AppImage (recommended):** download `Speed.News_<version>_amd64.AppImage`, make it executable (`chmod +x`, or Properties → "Allow executing as program") and open it. Updates install silently.
+- **`.deb` / `.rpm`:** also work, but each update asks for the administrator password.
+- **GNOME (Ubuntu, Fedora…):** the first time, the app offers to install its top-bar button (one click). Then reload GNOME: on X11 press Alt+F2, type `r`, Enter; on Wayland log out and back in. Without it, Ubuntu opens the tray menu on single click and the news only on double click.
+
+### Windows and macOS (experimental)
+
+They build and update like Linux, but have not been tested on real machines yet and are not code-signed (signing costs a yearly fee), so the system warns the first time. Bug reports are welcome.
+
+- **Windows:** run `Speed.News_<version>_x64-setup.exe`. If "Windows protected your PC" appears, click **More info → Run anyway**.
+- **macOS (Apple Silicon only):** open the `.dmg` and drag Speed News to Applications. The first open is blocked: go to **System Settings → Privacy & Security**, scroll down and click **Open Anyway** next to Speed News. The app lives in the menu bar (no Dock icon).
 
 ## Architecture
 
@@ -67,7 +84,7 @@ make lint
 
 ## Platform notes
 
-- **Linux / GNOME (recommended)**: run `make install-gnome-extension` once. It adds a Speed News button to the top bar: single click opens the news right below it, right click shows Open/Quit, and the unread count is shown next to the icon. While the button is active the app hides its tray icon. Why: Ubuntu's AppIndicator extension opens the tray menu on every single click (only a double click reaches the app), and it has no setting to change that.
+- **Linux / GNOME (recommended)**: install the top-bar button from the app (first-run notice or Settings → General; from a checkout, `make install-gnome-extension`). It adds a Speed News button to the top bar: single click opens the news right below it, right click shows Open/Quit, and the unread count is shown next to the icon. While the button is active the app hides its tray icon. Why: Ubuntu's AppIndicator extension opens the tray menu on every single click (only a double click reaches the app), and it has no setting to change that.
 - **Linux without the extension** (or other desktops): tray icon via the `ksni` backend (StatusNotifierItem). On GNOME/Ubuntu single click opens the menu and double click opens the news; KDE Plasma opens the news on single click. Unread items show as a red dot; the count is in the popover header.
 - **macOS**: clicking the icon opens the popover next to it; the count is the menu bar title.
 - **Windows**: clicking the icon opens the popover; red dot on the icon, count in the tooltip and popover header.

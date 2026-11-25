@@ -56,9 +56,13 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: Speed News ${{ github.ref_name }}
           releaseBody: |
-            **Linux:** download the `.AppImage` (updates itself automatically). The `.deb`/`.rpm` work too, but each update asks for the administrator password.
-            **Windows:** `.exe` installer. **macOS:** `.dmg` (not notarized yet: right-click → Open the first time).
-            Already installed? The app updates itself in the background.
+            **Linux (supported):** download the `.AppImage`, make it executable and open it — it updates itself silently. The `.deb`/`.rpm` work too, but each update asks for the administrator password. On GNOME, accept the app's offer to install its top-bar button, then reload GNOME.
+
+            **Windows and macOS (experimental, not code-signed yet):**
+            - Windows: `_x64-setup.exe`. On "Windows protected your PC": More info → Run anyway.
+            - macOS (Apple Silicon): `.dmg`. The first open is blocked: System Settings → Privacy & Security → Open Anyway.
+
+            Already installed? The app updates itself in the background. Full instructions: [README → Install](https://github.com/Breno-Andrade/speed-news#install).
           releaseDraft: true
           # Tags with a suffix (v0.1.0-rc.1) are rehearsals: pre-releases are ignored by
           # releases/latest, so installed apps never update to them.

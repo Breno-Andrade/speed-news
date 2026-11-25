@@ -46,6 +46,9 @@
         "installMode": "currentUser"
       }
     },
+    "macOS": {
+      "signingIdentity": "-"
+    },
     "resources": {
       "../gnome-shell-extension/": "gnome-shell-extension/"
     }

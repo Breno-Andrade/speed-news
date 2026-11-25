@@ -19,6 +19,11 @@ export async function resetStack(requestContext: APIRequestContext) {
   await requestContext.put(`${backendUrl}/settings`, { headers: authorizationHeaders, data: defaultSettings });
 }
 
+/** Saves settings over the defaults, like the settings screen would. */
+export async function saveSettings(requestContext: APIRequestContext, settingsChanges: Partial<typeof defaultSettings>) {
+  await requestContext.put(`${backendUrl}/settings`, { headers: authorizationHeaders, data: { ...defaultSettings, ...settingsChanges } });
+}
+
 export async function unreadCountFromApi(requestContext: APIRequestContext): Promise<number> {
   const unreadResponse = await requestContext.get(`${backendUrl}/articles/unread-count`, { headers: authorizationHeaders });
   return ((await unreadResponse.json()) as { unreadCount: number }).unreadCount;
